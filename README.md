@@ -3,7 +3,7 @@
 Sistema IoT per il monitoraggio della glicemia e la gestione della terapia insulinica tramite MQTT.
 
 ## Struttura del progetto
-
+```
 glicemia_monitor/
 ├── model/                    # Classi di modello
 │   ├── glucose_sensor_data.py
@@ -18,9 +18,9 @@ glicemia_monitor/
 │   └── notification_manager.py
 ├── utils/                    # Utilità
 │   └── senml_helper.py
-└── dashboard/               # Web interface
+└── dashboard/                # Web interface
     └── web_dashboard.py
-
+```
 ## Topic MQTT
 
 - `/iot/patient/<patient_id>/glucose/sensor/data` — Dati sensore glicemia
