@@ -2,7 +2,7 @@
 
 Un sistema IoT per il monitoraggio della glicemia e la gestione remota della pompa per insulina dei pazienti diabetici. Il progetto utilizza MQTT come sistema di messaggistica per raccogliere, elaborare e visualizzare i dati sanitari in tempo reale.
 
-## 🚀 Funzionalità principali
+## Funzionalità principali
 
 - Raccolta dati da sensori glicemici tramite MQTT.
 - Invio comandi alle pompe di insulina.
@@ -12,7 +12,7 @@ Un sistema IoT per il monitoraggio della glicemia e la gestione remota della pom
 
 ---
 
-## 🗂 Struttura del progetto
+## Struttura del progetto
 ```
 glicemia_monitor/
 ├── model/ # Classi di modello
@@ -34,7 +34,7 @@ glicemia_monitor/
 
 ---
 
-## 📡 MQTT Topic Structure
+## MQTT Topic Structure
 
 | Topic                                                       | Descrizione                         |
 |-------------------------------------------------------------|-------------------------------------|
@@ -46,7 +46,7 @@ glicemia_monitor/
 
 ---
 
-## ⚙️ Requisiti
+## Requisiti
 
 Installa le dipendenze con:
 
