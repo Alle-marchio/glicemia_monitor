@@ -1,6 +1,6 @@
 import json
 import time
-
+from utils.senml_helper import SenMLHelper
 
 class PatientDescriptor:
     """Descrittore del paziente diabetico con parametri di configurazione"""
@@ -63,3 +63,20 @@ class PatientDescriptor:
     def to_json(self):
         """Converte il modello in JSON per invio MQTT"""
         return json.dumps(self, default=lambda o: o.__dict__)
+
+    def to_senml(self):
+        timestamp = self.last_updated
+
+        base_name = f"urn:patient:{self.patient_id}:descriptor:"
+        return json.dumps([
+            {"bn": base_name, "bt": timestamp},
+            {"n": "target_glucose_min", "v": self.target_glucose_min},
+            {"n": "target_glucose_max", "v": self.target_glucose_max},
+            {"n": "hypo_threshold", "v": self.hypoglycemia_threshold},
+            {"n": "hyper_threshold", "v": self.hyperglycemia_threshold},
+            {"n": "isf", "v": self.insulin_sensitivity_factor},
+            {"n": "carb_ratio", "v": self.carb_ratio},
+            {"n": "basal_rate", "v": self.basal_insulin_rate},
+            {"n": "alerts_enabled", "vs": str(self.alert_enabled)}
+        ])
+

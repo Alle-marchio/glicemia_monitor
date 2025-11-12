@@ -1,6 +1,7 @@
 import json
 import time
 import random
+from utils.senml_helper import SenMLHelper
 
 
 class GlucoseSensorData:
@@ -98,3 +99,11 @@ class GlucoseSensorData:
     def to_json(self):
         """Converte in JSON per invio MQTT"""
         return json.dumps(self, default=lambda o: o.__dict__)
+
+    def to_senml(self):
+        return SenMLHelper.create_glucose_measurement(
+            patient_id=self.patient_id,
+            glucose_value=self.glucose_value,
+            trend=self.trend_direction,
+            timestamp=self.timestamp
+        )

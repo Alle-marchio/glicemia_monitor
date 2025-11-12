@@ -1,7 +1,7 @@
 import json
 import time
 import uuid
-
+from utils.senml_helper import SenMLHelper
 
 class InsulinPumpCommand:
     """Comando per la pompa insulina"""
@@ -39,6 +39,15 @@ class InsulinPumpCommand:
     def to_json(self):
         """Converte in JSON per invio MQTT"""
         return json.dumps(self, default=lambda o: o.__dict__)
+
+    def to_senml(self):
+        """ Converte il comando in formato SenML"""
+        return SenMLHelper.create_insulin_command(
+            patient_id=self.patient_id,
+            units=self.insulin_amount,
+            command_type=self.delivery_mode,
+            timestamp=self.timestamp
+        )
 
 
 class InsulinPumpStatus:
@@ -133,3 +142,12 @@ class InsulinPumpStatus:
     def to_json(self):
         """Converte in JSON per invio MQTT"""
         return json.dumps(self, default=lambda o: o.__dict__)
+
+    def to_senml(self):
+        return SenMLHelper.create_pump_status(
+            patient_id=self.patient_id,
+            reservoir_level=self.insulin_reservoir_level,
+            battery_level=self.battery_level,
+            status=self.pump_status,
+            timestamp=self.timestamp
+        )
