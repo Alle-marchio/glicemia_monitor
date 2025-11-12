@@ -37,10 +37,10 @@ class GlucoseSensorData:
             return "critical_low"
         elif glucose_value < 60.0:
             return "low"
-        elif glucose_value > 400.0:
-            return "critical_high"
         elif glucose_value > 250.0:
             return "high"
+        elif glucose_value > 400.0:
+            return "critical_high"
         else:
             return "normal"
 
