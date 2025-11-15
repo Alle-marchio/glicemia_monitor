@@ -10,7 +10,7 @@ from model.glucose_sensor_data import GlucoseSensorData
 from model.patient_descriptor import PatientDescriptor
 from model.insulin_pump_data import InsulinPumpCommand, InsulinPumpStatus
 from conf.mqtt_conf_params import MqttConfigurationParameters as Config
-from utils.senml_helper import SenMLHelper  # ✅ Nuovo import
+from utils.senml_helper import SenMLHelper
 
 
 class DataCollectorConsumer:
