@@ -122,19 +122,24 @@ class GlucoseSensorProducerSenML:
 
     def create_senml_message(self, reading):
         """
-        Crea un messaggio SenML usando il SenMLHelper del progetto
+        Crea un messaggio SenML completo usando il SenMLHelper del progetto
 
         Args:
             reading: Oggetto GlucoseSensorData con la lettura corrente
 
         Returns:
-            Stringa JSON in formato SenML
+            Stringa JSON in formato SenML con tutti i dati del sensore
         """
-        # Usa il metodo create_glucose_measurement del SenMLHelper
-        senml_json = SenMLHelper.create_glucose_measurement(
+        # Usa il metodo create_glucose_sensor_full_data del SenMLHelper
+        senml_json = SenMLHelper.create_glucose_sensor_full_data(
             patient_id=self.patient_id,
+            sensor_id=self.sensor_id,
             glucose_value=reading.glucose_value,
-            trend=reading.trend_direction,
+            glucose_status=reading.glucose_status,
+            trend_direction=reading.trend_direction,
+            trend_rate=reading.trend_rate,
+            battery_level=reading.battery_level,
+            signal_strength=reading.signal_strength,
             timestamp=float(reading.timestamp)
         )
 

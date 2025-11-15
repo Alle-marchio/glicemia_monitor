@@ -49,6 +49,75 @@ class SenMLHelper:
         return json.dumps(senml_record)
 
     @staticmethod
+    def create_glucose_sensor_full_data(patient_id: str, sensor_id: str,
+                                       glucose_value: float, glucose_status: str,
+                                       trend_direction: str, trend_rate: float,
+                                       battery_level: float, signal_strength: int,
+                                       timestamp: float = None) -> str:
+        """
+        Crea un messaggio SenML completo con tutti i dati del sensore glicemia
+
+        Args:
+            patient_id: ID del paziente
+            sensor_id: ID del sensore
+            glucose_value: Valore glicemia in mg/dL
+            glucose_status: Status glicemico ("normal", "low", "high", "critical_low", "critical_high")
+            trend_direction: Direzione trend ("rising", "falling", "stable")
+            trend_rate: Velocità cambio glicemia (mg/dL/min)
+            battery_level: Livello batteria sensore (%)
+            signal_strength: Forza segnale (dBm)
+            timestamp: Timestamp UNIX (se None, usa tempo corrente)
+
+        Returns:
+            Stringa JSON in formato SenML con tutti i dati del sensore
+        """
+        if timestamp is None:
+            timestamp = time.time()
+
+        base_name = f"urn:patient:{patient_id}:sensor:{sensor_id}:glucose:"
+
+        senml_record = [
+            {
+                "bn": base_name,  # Base Name
+                "bt": timestamp,  # Base Time
+                "bu": "mg/dL"     # Base Unit per glicemia
+            },
+            {
+                "n": "level",     # Livello glicemia
+                "v": glucose_value,
+                "t": 0
+            },
+            {
+                "n": "status",    # Status glicemico
+                "vs": glucose_status
+            },
+            {
+                "n": "trend",     # Direzione trend
+                "vs": trend_direction
+            },
+            {
+                "n": "trend_rate", # Velocità cambio (mg/dL/min)
+                "v": trend_rate,
+                "u": "mg/dL/min",
+                "t": 0
+            },
+            {
+                "n": "battery",   # Livello batteria
+                "v": battery_level,
+                "u": "%",
+                "t": 0
+            },
+            {
+                "n": "signal",    # Forza segnale
+                "v": signal_strength,
+                "u": "dBm",
+                "t": 0
+            }
+        ]
+
+        return json.dumps(senml_record)
+
+    @staticmethod
     def create_insulin_command(patient_id: str, units: float,
                                command_type: str = "bolus", timestamp: float = None) -> str:
         """
