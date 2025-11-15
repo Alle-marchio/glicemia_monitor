@@ -37,7 +37,7 @@ class MqttConfigurationParameters(object):
     RETAIN_PUMP_STATUS = True
 
     # Intervalli di tempo (secondi)
-    GLUCOSE_READING_INTERVAL = 5  # Ogni 5 secondi (CGM realistico: 1-5 min)
+    GLUCOSE_READING_INTERVAL = 10  # Ogni 5 secondi (CGM realistico: 1-5 min)
     PUMP_STATUS_INTERVAL = 30  # Status pompa ogni 30 secondi
 
     # Soglie glicemia (mg/dL)

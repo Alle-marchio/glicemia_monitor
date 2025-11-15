@@ -9,13 +9,14 @@ import random
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from model.glucose_sensor_data import GlucoseSensorData
 from conf.mqtt_conf_params import MqttConfigurationParameters as Config
+from utils.senml_helper import SenMLHelper
 
 
-class GlucoseSensorProducer:
+class GlucoseSensorProducerSenML:
     """
-    Sensore glicemia simulato che:
+    Sensore glicemia simulato con formato SenML che:
     - Genera letture glicemiche realistiche
-    - Pubblica dati su MQTT ad intervalli regolari
+    - Pubblica dati in formato SenML su MQTT
     - Simula variazioni naturali e scenari critici
     """
 
@@ -29,7 +30,7 @@ class GlucoseSensorProducer:
         # Configurazione MQTT
         self.broker_address = Config.BROKER_ADDRESS
         self.broker_port = Config.BROKER_PORT
-        self.client = mqtt.Client(f"glucose_sensor_{sensor_id}")
+        self.client = mqtt.Client(f"glucose_sensor_senml_{sensor_id}")
 
         # Topic MQTT per pubblicazione dati
         self.base_topic = f"/iot/patient/{patient_id}"
@@ -39,7 +40,7 @@ class GlucoseSensorProducer:
         self.reading_interval = Config.GLUCOSE_READING_INTERVAL
 
         # Modalità simulazione
-        self.simulation_mode = simulation_mode  # "normal", "hypoglycemia", "hyperglycemia", "fluctuating"
+        self.simulation_mode = simulation_mode
         self.reading_count = 0
 
         # Configurazione callbacks
@@ -49,10 +50,11 @@ class GlucoseSensorProducer:
     def on_connect(self, client, userdata, flags, rc):
         """Callback quando il sensore si connette al broker"""
         if rc == 0:
-            print(f"✅ Sensore glicemia connesso al broker MQTT")
+            print(f"✅ Sensore glicemia (SenML) connesso al broker MQTT")
             print(f"📡 Topic pubblicazione: {self.publish_topic}")
             print(f"⏱️  Intervallo letture: {self.reading_interval}s")
             print(f"🎭 Modalità: {self.simulation_mode}")
+            print(f"📋 Formato: SenML (RFC 8428)")
             print("=" * 60)
         else:
             print(f"❌ Connessione fallita con codice: {rc}")
@@ -69,36 +71,27 @@ class GlucoseSensorProducer:
         current_value = self.sensor.glucose_value
 
         if self.simulation_mode == "normal":
-            # Variazioni normali: ±5 mg/dL con tendenza al target (100-120)
             target = random.uniform(90, 130)
             variation = (target - current_value) * 0.1 + random.uniform(-5, 5)
 
         elif self.simulation_mode == "hypoglycemia":
-            # Simula trend ipoglicemico (scende gradualmente)
             variation = random.uniform(-8, -2)
-            # Piccola chance di risalire
             if random.random() < 0.1:
                 variation = random.uniform(2, 8)
 
         elif self.simulation_mode == "hyperglycemia":
-            # Simula trend iperglicemico (sale gradualmente)
             variation = random.uniform(2, 10)
-            # Piccola chance di scendere
             if random.random() < 0.1:
                 variation = random.uniform(-8, -2)
 
         elif self.simulation_mode == "fluctuating":
-            # Variazioni ampie e irregolari
             variation = random.uniform(-15, 15)
 
         else:
-            # Default: variazioni moderate
             variation = random.uniform(-7, 7)
 
         # Applica la variazione
         new_glucose = current_value + variation
-
-        # Limiti realistici (30-500 mg/dL)
         new_glucose = max(30.0, min(500.0, new_glucose))
 
         # Aggiorna il sensore
@@ -127,8 +120,28 @@ class GlucoseSensorProducer:
 
         return self.sensor
 
+    def create_senml_message(self, reading):
+        """
+        Crea un messaggio SenML usando il SenMLHelper del progetto
+
+        Args:
+            reading: Oggetto GlucoseSensorData con la lettura corrente
+
+        Returns:
+            Stringa JSON in formato SenML
+        """
+        # Usa il metodo create_glucose_measurement del SenMLHelper
+        senml_json = SenMLHelper.create_glucose_measurement(
+            patient_id=self.patient_id,
+            glucose_value=reading.glucose_value,
+            trend=reading.trend_direction,
+            timestamp=float(reading.timestamp)
+        )
+
+        return senml_json
+
     def publish_reading(self):
-        """Pubblica la lettura sul topic MQTT"""
+        """Pubblica la lettura in formato SenML sul topic MQTT"""
         try:
             # Incrementa contatore letture
             self.reading_count += 1
@@ -136,13 +149,13 @@ class GlucoseSensorProducer:
             # Ottieni lettura corrente
             reading = self.simulate_glucose_reading()
 
-            # Converti in JSON
-            data_json = reading.to_json()
+            # Crea messaggio SenML
+            senml_json = self.create_senml_message(reading)
 
             # Pubblica su MQTT
             result = self.client.publish(
                 self.publish_topic,
-                data_json,
+                senml_json,
                 qos=Config.QOS_SENSOR_DATA,
                 retain=False
             )
@@ -151,7 +164,7 @@ class GlucoseSensorProducer:
             status_emoji = self._get_status_emoji(reading.glucose_status)
             trend_emoji = self._get_trend_emoji(reading.trend_direction)
 
-            print(f"\n📊 Lettura #{self.reading_count}")
+            print(f"\n📊 Lettura #{self.reading_count} (SenML)")
             print(f"🩸 Glicemia: {reading.glucose_value:.1f} mg/dL {status_emoji}")
             print(f"📈 Status: {reading.glucose_status}")
             print(f"{trend_emoji} Trend: {reading.trend_direction} ({reading.trend_rate:.1f} mg/dL/min)")
@@ -162,7 +175,10 @@ class GlucoseSensorProducer:
                 print(f"🚨 ATTENZIONE: Valore critico rilevato!")
 
             if result.rc == mqtt.MQTT_ERR_SUCCESS:
-                print(f"✅ Dati pubblicati con successo")
+                print(f"✅ Dati SenML pubblicati con successo")
+                # Mostra preview del messaggio SenML (primi 150 caratteri)
+                preview = senml_json[:150] + "..." if len(senml_json) > 150 else senml_json
+                print(f"📋 SenML: {preview}")
             else:
                 print(f"⚠️ Errore pubblicazione (rc: {result.rc})")
 
@@ -202,12 +218,13 @@ class GlucoseSensorProducer:
         """Esegue letture continue ad intervalli regolari"""
         try:
             print("\n" + "=" * 60)
-            print("🚀 AVVIO SENSORE GLICEMIA")
+            print("🚀 AVVIO SENSORE GLICEMIA (SenML)")
             print("=" * 60)
             print(f"🆔 Sensore ID: {self.sensor_id}")
             print(f"👤 Paziente ID: {self.patient_id}")
             print(f"🩸 Glicemia iniziale: {self.sensor.glucose_value:.1f} mg/dL")
             print(f"📡 Broker: {self.broker_address}:{self.broker_port}")
+            print(f"📋 Formato: SenML (RFC 8428)")
             print("=" * 60 + "\n")
 
             # Connetti al broker
@@ -230,7 +247,7 @@ class GlucoseSensorProducer:
         """Esegue un numero specifico di letture"""
         try:
             print("\n" + "=" * 60)
-            print(f"🚀 AVVIO SENSORE GLICEMIA ({n} letture)")
+            print(f"🚀 AVVIO SENSORE GLICEMIA SenML ({n} letture)")
             print("=" * 60)
             print(f"🆔 Sensore ID: {self.sensor_id}")
             print(f"👤 Paziente ID: {self.patient_id}")
@@ -244,11 +261,11 @@ class GlucoseSensorProducer:
             # Esegui n letture
             for i in range(n):
                 self.publish_reading()
-                if i < n - 1:  # Non aspettare dopo l'ultima lettura
+                if i < n - 1:
                     time.sleep(self.reading_interval)
 
             print(f"\n✅ Completate {n} letture")
-            time.sleep(2)  # Attendi che gli ultimi messaggi vengano inviati
+            time.sleep(2)
             self.stop()
 
         except KeyboardInterrupt:
@@ -270,8 +287,7 @@ class GlucoseSensorProducer:
 if __name__ == "__main__":
     import argparse
 
-    # Parser argomenti da linea di comando
-    parser = argparse.ArgumentParser(description='Simulatore sensore glicemia')
+    parser = argparse.ArgumentParser(description='Simulatore sensore glicemia SenML')
     parser.add_argument('--patient-id', type=str, default='patient_001',
                         help='ID del paziente')
     parser.add_argument('--sensor-id', type=str, default='sensor_001',
@@ -286,8 +302,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # Crea il sensore
-    sensor = GlucoseSensorProducer(
+    # Crea il sensore con supporto SenML
+    sensor = GlucoseSensorProducerSenML(
         sensor_id=args.sensor_id,
         patient_id=args.patient_id,
         initial_glucose=args.initial_glucose,
@@ -301,6 +317,6 @@ if __name__ == "__main__":
         sensor.run_continuous()
 
     # Esempi di utilizzo:
-    # python glucose_sensor_producer.py --mode normal
-    # python glucose_sensor_producer.py --mode hyperglycemia --initial-glucose 200
-    # python glucose_sensor_producer.py --readings 20 --mode hypoglycemia
+    # python glucose_sensor_producer_senml.py --mode normal
+    # python glucose_sensor_producer_senml.py --mode hyperglycemia --initial-glucose 200
+    # python glucose_sensor_producer_senml.py --readings 20 --mode hypoglycemia

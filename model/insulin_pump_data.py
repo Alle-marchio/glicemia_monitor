@@ -86,7 +86,7 @@ class InsulinPumpStatus:
         self.insulin_reservoir_level = max(0.0, self.insulin_reservoir_level - hourly_consumption)
 
         # Simula consumo batteria
-        battery_drain = 0.01  # 0.01% ogni aggiornamento
+        battery_drain = 0.1  # 0.01% ogni aggiornamento
         self.battery_level = max(0.0, self.battery_level - battery_drain)
 
         # Controlla allarmi
