@@ -278,24 +278,29 @@ class InsulinPumpActuatorSenML:
         """
         Crea un messaggio SenML completo per lo status della pompa
 
-        Formato SenML generato:
+        Formato SenML generato (compatibile con InsulinPumpStatus):
         [
             {
                 "bn": "urn:patient:patient_001:pump:pump_001:",
                 "bt": 1234567890.0
             },
             {"n": "reservoir", "v": 285.5, "u": "U"},
+            {"n": "reservoir_capacity", "v": 300.0, "u": "U"},
+            {"n": "reservoir_pct", "v": 95.2, "u": "%"},
             {"n": "battery", "v": 95.2, "u": "%"},
             {"n": "status", "vs": "active"},
             {"n": "basal_rate", "v": 1.0, "u": "U/h"},
-            {"n": "total_delivered", "v": 14.5, "u": "U"},
+            {"n": "total_daily_insulin", "v": 14.5, "u": "U"},
             {"n": "last_bolus", "v": 2.5, "u": "U"},
-            {"n": "alarms_count", "v": 0}
+            {"n": "last_bolus_time", "v": 1234567890},
+            {"n": "alarms_count", "v": 0},
+            {"n": "alarms", "vs": "low_insulin,low_battery"}
         ]
         """
         base_name = f"urn:patient:{self.patient_id}:pump:{self.pump_id}:"
         timestamp = time.time()
 
+        # Record base - campi sempre presenti
         senml_record = [
             {
                 "bn": base_name,
@@ -305,6 +310,18 @@ class InsulinPumpActuatorSenML:
                 "n": "reservoir",
                 "v": round(self.status.insulin_reservoir_level, 2),
                 "u": "U",
+                "t": 0
+            },
+            {
+                "n": "reservoir_capacity",
+                "v": round(self.status.insulin_reservoir_capacity, 2),
+                "u": "U",
+                "t": 0
+            },
+            {
+                "n": "reservoir_pct",
+                "v": round(self.status.insulin_percentage(), 1),
+                "u": "%",
                 "t": 0
             },
             {
@@ -325,14 +342,8 @@ class InsulinPumpActuatorSenML:
                 "t": 0
             },
             {
-                "n": "total_delivered",
-                "v": round(self.status.total_insulin_delivered, 2),
-                "u": "U",
-                "t": 0
-            },
-            {
-                "n": "last_bolus",
-                "v": round(self.status.last_bolus_amount, 2),
+                "n": "total_daily_insulin",
+                "v": round(self.status.total_daily_insulin, 2),
                 "u": "U",
                 "t": 0
             },
@@ -342,6 +353,39 @@ class InsulinPumpActuatorSenML:
                 "t": 0
             }
         ]
+
+        # Aggiungi last_bolus se esiste
+        if self.status.last_bolus_amount is not None:
+            senml_record.append({
+                "n": "last_bolus",
+                "v": round(self.status.last_bolus_amount, 2),
+                "u": "U",
+                "t": 0
+            })
+
+        # Aggiungi last_bolus_time se esiste
+        if self.status.last_bolus_time is not None:
+            senml_record.append({
+                "n": "last_bolus_time",
+                "v": self.status.last_bolus_time,
+                "t": 0
+            })
+
+        # Aggiungi lista allarmi attivi come stringa
+        if self.status.active_alarms:
+            senml_record.append({
+                "n": "alarms",
+                "vs": ",".join(self.status.active_alarms),
+                "t": 0
+            })
+
+        # Aggiungi last_error se presente
+        if self.status.last_error is not None:
+            senml_record.append({
+                "n": "last_error",
+                "vs": str(self.status.last_error),
+                "t": 0
+            })
 
         return json.dumps(senml_record)
 
