@@ -10,15 +10,16 @@ import threading
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from model.insulin_pump_data import InsulinPumpCommand, InsulinPumpStatus
 from conf.mqtt_conf_params import MqttConfigurationParameters as Config
+from utils.senml_helper import SenMLHelper
 
 
-class InsulinPumpActuator:
+class InsulinPumpActuatorSenML:
     """
-    Pompa insulina simulata che:
-    - Riceve comandi dal Data Collector via MQTT
+    Pompa insulina simulata con supporto SenML che:
+    - Riceve comandi in formato SenML dal Data Collector via MQTT
     - Esegue erogazioni di insulina (bolo/basale)
-    - Pubblica status periodicamente
-    - Gestisce allarmi (insulina bassa, batteria scarica)
+    - Pubblica status in formato SenML periodicamente
+    - Gestisce allarmi (insulina bassa, batteria scarica) in formato SenML
     """
 
     def __init__(self, pump_id, patient_id, initial_insulin=300.0, initial_battery=100.0):
@@ -33,7 +34,7 @@ class InsulinPumpActuator:
         # Configurazione MQTT
         self.broker_address = Config.BROKER_ADDRESS
         self.broker_port = Config.BROKER_PORT
-        self.client = mqtt.Client(f"insulin_pump_{pump_id}")
+        self.client = mqtt.Client(f"insulin_pump_senml_{pump_id}")
 
         # Topic MQTT
         self.base_topic = f"/iot/patient/{patient_id}"
@@ -63,10 +64,11 @@ class InsulinPumpActuator:
     def on_connect(self, client, userdata, flags, rc):
         """Callback quando la pompa si connette al broker"""
         if rc == 0:
-            print(f"✅ Pompa insulina connessa al broker MQTT")
+            print(f"✅ Pompa insulina (SenML) connessa al broker MQTT")
             print(f"📥 Subscribing a: {self.command_topic}")
             print(f"📤 Pubblicazione status su: {self.status_topic}")
             print(f"⏱️  Intervallo status: {self.status_interval}s")
+            print(f"📋 Formato: SenML (RFC 8428)")
             print("=" * 60)
 
             # Subscribe al topic comandi
@@ -75,7 +77,7 @@ class InsulinPumpActuator:
             # Pubblica status iniziale (retained)
             self.publish_status()
 
-            print("🎯 Pompa pronta per ricevere comandi...")
+            print("🎯 Pompa pronta per ricevere comandi SenML...")
         else:
             print(f"❌ Connessione fallita con codice: {rc}")
 
@@ -85,43 +87,92 @@ class InsulinPumpActuator:
             print(f"⚠️ Disconnessione imprevista dal broker (rc: {rc})")
 
     def on_message(self, client, userdata, msg):
-        """Callback quando arriva un comando MQTT"""
+        """Callback quando arriva un comando MQTT in formato SenML"""
         try:
             topic = msg.topic
-            payload = json.loads(msg.payload.decode())
+            payload = msg.payload.decode()
 
-            # Gestione comandi
+            # Gestione comandi SenML
             if "insulin/pump/command" in topic:
-                self.process_command(payload)
+                self.process_senml_command(payload)
 
         except Exception as e:
             print(f"❌ Errore nell'elaborazione del messaggio: {e}")
 
-    def process_command(self, command_data):
-        """Elabora un comando ricevuto dal Data Collector"""
+    def parse_senml_command(self, senml_json):
+        """
+        Parse un comando SenML e estrae i parametri
+
+        Formato atteso SenML:
+        [
+            {
+                "bn": "urn:patient:patient_001:insulin:command:",
+                "bt": 1234567890.0
+            },
+            {"n": "dose", "v": 2.5, "u": "U"},
+            {"n": "type", "vs": "bolus"},
+            {"n": "command_id", "vs": "cmd_123"},
+            {"n": "priority", "vs": "high"},
+            {"n": "reason", "vs": "High glucose detected"}
+        ]
+
+        Returns:
+            Dict con i parametri del comando
+        """
+        try:
+            parsed = SenMLHelper.parse_senml(senml_json)
+            measurements = parsed.get('measurements', {})
+
+            # Estrai i parametri dal messaggio SenML
+            command_data = {
+                'insulin_amount': measurements.get('dose', {}).get('value', 0.0),
+                'delivery_mode': measurements.get('type', {}).get('value', 'bolus'),
+                'command_id': measurements.get('command_id', {}).get('value', 'unknown'),
+                'priority': measurements.get('priority', {}).get('value', 'normal'),
+                'reason': measurements.get('reason', {}).get('value', 'N/A'),
+                'timestamp': parsed.get('base_time', time.time())
+            }
+
+            return command_data
+
+        except Exception as e:
+            print(f"❌ Errore nel parsing comando SenML: {e}")
+            return None
+
+    def process_senml_command(self, senml_payload):
+        """Elabora un comando ricevuto in formato SenML"""
         print("\n" + "=" * 60)
-        print("📬 NUOVO COMANDO RICEVUTO")
+        print("📬 NUOVO COMANDO SENML RICEVUTO")
         print("=" * 60)
 
         try:
+            # Parse del messaggio SenML
+            command_data = self.parse_senml_command(senml_payload)
+
+            if command_data is None:
+                print("❌ Comando SenML non valido")
+                return False
+
             # Estrai parametri comando
-            command_id = command_data.get('command_id', 'unknown')
-            delivery_mode = command_data.get('delivery_mode')
-            insulin_amount = command_data.get('insulin_amount')
-            priority = command_data.get('priority', 'normal')
-            reason = command_data.get('reason', 'N/A')
+            command_id = command_data['command_id']
+            delivery_mode = command_data['delivery_mode']
+            insulin_amount = command_data['insulin_amount']
+            priority = command_data['priority']
+            reason = command_data['reason']
 
             print(f"🆔 Command ID: {command_id}")
             print(f"💉 Modalità: {delivery_mode}")
             print(f"📊 Quantità: {insulin_amount:.2f} unità")
             print(f"⚡ Priorità: {priority}")
             print(f"📝 Motivo: {reason}")
+            print(f"📋 Formato: SenML")
 
             # Verifica stato pompa
             if self.status.pump_status != "active":
                 print(f"⚠️ COMANDO RIFIUTATO: Pompa non attiva (status: {self.status.pump_status})")
-                self.send_alert("ERROR",
-                                f"Comando {command_id} rifiutato: pompa non attiva")
+                self.send_senml_alert("ERROR",
+                                      f"Comando {command_id} rifiutato: pompa non attiva",
+                                      "high")
                 return False
 
             # Verifica disponibilità insulina
@@ -129,8 +180,9 @@ class InsulinPumpActuator:
                 print(f"⚠️ COMANDO RIFIUTATO: Insulina insufficiente")
                 print(f"   Richiesto: {insulin_amount:.2f}U")
                 print(f"   Disponibile: {self.status.insulin_reservoir_level:.2f}U")
-                self.send_alert("ERROR",
-                                f"Insulina insufficiente per comando {command_id}")
+                self.send_senml_alert("ERROR",
+                                      f"Insulina insufficiente per comando {command_id}",
+                                      "critical")
                 return False
 
             # Verifica limiti di sicurezza
@@ -139,8 +191,9 @@ class InsulinPumpActuator:
                     print(f"⚠️ COMANDO RIFIUTATO: Dose supera limite sicurezza")
                     print(f"   Richiesto: {insulin_amount:.2f}U")
                     print(f"   Limite: {self.max_single_bolus:.2f}U")
-                    self.send_alert("ERROR",
-                                    f"Dose {insulin_amount:.2f}U supera limite sicurezza")
+                    self.send_senml_alert("ERROR",
+                                          f"Dose {insulin_amount:.2f}U supera limite sicurezza",
+                                          "critical")
                     return False
 
             # ESEGUI IL COMANDO
@@ -158,12 +211,13 @@ class InsulinPumpActuator:
                     'reason': reason
                 })
 
-                # Pubblica nuovo status
+                # Pubblica nuovo status in SenML
                 self.publish_status()
 
-                # Invia conferma
-                self.send_alert("INFO",
-                                f"Erogazione completata: {insulin_amount:.2f}U ({delivery_mode})")
+                # Invia conferma in SenML
+                self.send_senml_alert("INFO",
+                                      f"Erogazione completata: {insulin_amount:.2f}U ({delivery_mode})",
+                                      "low")
             else:
                 print(f"❌ Errore nell'esecuzione del comando")
 
@@ -171,7 +225,7 @@ class InsulinPumpActuator:
             return success
 
         except Exception as e:
-            print(f"❌ Errore nel processamento comando: {e}")
+            print(f"❌ Errore nel processamento comando SenML: {e}")
             return False
 
     def execute_delivery(self, delivery_mode, amount):
@@ -220,26 +274,97 @@ class InsulinPumpActuator:
             print(f"❌ Errore durante erogazione: {e}")
             return False
 
+    def create_senml_status(self):
+        """
+        Crea un messaggio SenML completo per lo status della pompa
+
+        Formato SenML generato:
+        [
+            {
+                "bn": "urn:patient:patient_001:pump:pump_001:",
+                "bt": 1234567890.0
+            },
+            {"n": "reservoir", "v": 285.5, "u": "U"},
+            {"n": "battery", "v": 95.2, "u": "%"},
+            {"n": "status", "vs": "active"},
+            {"n": "basal_rate", "v": 1.0, "u": "U/h"},
+            {"n": "total_delivered", "v": 14.5, "u": "U"},
+            {"n": "last_bolus", "v": 2.5, "u": "U"},
+            {"n": "alarms_count", "v": 0}
+        ]
+        """
+        base_name = f"urn:patient:{self.patient_id}:pump:{self.pump_id}:"
+        timestamp = time.time()
+
+        senml_record = [
+            {
+                "bn": base_name,
+                "bt": timestamp
+            },
+            {
+                "n": "reservoir",
+                "v": round(self.status.insulin_reservoir_level, 2),
+                "u": "U",
+                "t": 0
+            },
+            {
+                "n": "battery",
+                "v": round(self.status.battery_level, 2),
+                "u": "%",
+                "t": 0
+            },
+            {
+                "n": "status",
+                "vs": self.status.pump_status,
+                "t": 0
+            },
+            {
+                "n": "basal_rate",
+                "v": round(self.status.current_basal_rate, 2),
+                "u": "U/h",
+                "t": 0
+            },
+            {
+                "n": "total_delivered",
+                "v": round(self.status.total_insulin_delivered, 2),
+                "u": "U",
+                "t": 0
+            },
+            {
+                "n": "last_bolus",
+                "v": round(self.status.last_bolus_amount, 2),
+                "u": "U",
+                "t": 0
+            },
+            {
+                "n": "alarms_count",
+                "v": len(self.status.active_alarms),
+                "t": 0
+            }
+        ]
+
+        return json.dumps(senml_record)
+
     def publish_status(self):
-        """Pubblica lo status corrente della pompa"""
+        """Pubblica lo status corrente della pompa in formato SenML"""
         try:
             # Aggiorna lo status (consuma batteria/insulina basale)
             self.status.update_status()
 
-            # Converti in JSON
-            status_json = self.status.to_json()
+            # Crea messaggio SenML
+            status_senml = self.create_senml_status()
 
             # Pubblica su MQTT (retained per avere sempre l'ultimo status)
             result = self.client.publish(
                 self.status_topic,
-                status_json,
+                status_senml,
                 qos=Config.QOS_SENSOR_DATA,
                 retain=Config.RETAIN_PUMP_STATUS
             )
 
             # Log status (versione compatta)
             insulin_pct = self.status.insulin_percentage()
-            print(f"📊 Status pubblicato | "
+            print(f"📊 Status SenML pubblicato | "
                   f"💉 {self.status.insulin_reservoir_level:.1f}U ({insulin_pct:.0f}%) | "
                   f"🔋 {self.status.battery_level:.1f}% | "
                   f"⚙️  {self.status.pump_status} | "
@@ -248,40 +373,51 @@ class InsulinPumpActuator:
             # Gestione allarmi critici
             if self.status.has_critical_alarms():
                 for alarm in self.status.active_alarms:
-                    self.send_alert("EMERGENCY", f"🚨 ALLARME CRITICO: {alarm}")
+                    self.send_senml_alert("PUMP_ALARM", f"🚨 ALLARME CRITICO: {alarm}", "critical")
 
             return result.rc == mqtt.MQTT_ERR_SUCCESS
 
         except Exception as e:
-            print(f"❌ Errore pubblicazione status: {e}")
+            print(f"❌ Errore pubblicazione status SenML: {e}")
             return False
 
-    def send_alert(self, level, message):
-        """Invia un alert al topic notifiche"""
-        try:
-            alert = {
-                'pump_id': self.pump_id,
-                'patient_id': self.patient_id,
-                'timestamp': int(time.time()),
-                'alert_level': level,
-                'message': message,
-                'insulin_level': self.status.insulin_reservoir_level,
-                'battery_level': self.status.battery_level
-            }
+    def send_senml_alert(self, alert_type, message, severity="medium"):
+        """
+        Invia un alert al topic notifiche in formato SenML
 
-            alert_json = json.dumps(alert)
+        Args:
+            alert_type: Tipo di alert (es. "ERROR", "INFO", "PUMP_ALARM")
+            message: Messaggio descrittivo
+            severity: Gravità ("low", "medium", "high", "critical")
+        """
+        try:
+            # Usa il metodo del SenMLHelper
+            alert_senml = SenMLHelper.create_notification_alert(
+                patient_id=self.patient_id,
+                alert_type=alert_type,
+                message=message,
+                severity=severity,
+                timestamp=time.time()
+            )
+
+            # Pubblica l'alert
             self.client.publish(
                 self.alert_topic,
-                alert_json,
+                alert_senml,
                 qos=Config.QOS_NOTIFICATIONS,
                 retain=False
             )
 
+            # Log dell'alert inviato
+            severity_emoji = {"low": "ℹ️", "medium": "⚠️", "high": "🔶", "critical": "🚨"}
+            emoji = severity_emoji.get(severity, "📢")
+            print(f"{emoji} Alert SenML inviato: [{alert_type}] {message}")
+
         except Exception as e:
-            print(f"❌ Errore invio alert: {e}")
+            print(f"❌ Errore invio alert SenML: {e}")
 
     def status_publisher_loop(self):
-        """Loop per pubblicazione periodica dello status"""
+        """Loop per pubblicazione periodica dello status in SenML"""
         while self.running:
             self.publish_status()
             time.sleep(self.status_interval)
@@ -290,13 +426,14 @@ class InsulinPumpActuator:
         """Avvia la pompa"""
         try:
             print("\n" + "=" * 60)
-            print("🚀 AVVIO POMPA INSULINA")
+            print("🚀 AVVIO POMPA INSULINA (SenML)")
             print("=" * 60)
             print(f"🆔 Pompa ID: {self.pump_id}")
             print(f"👤 Paziente ID: {self.patient_id}")
             print(f"💉 Insulina iniziale: {self.status.insulin_reservoir_level:.1f}U")
             print(f"🔋 Batteria: {self.status.battery_level:.1f}%")
             print(f"📡 Broker: {self.broker_address}:{self.broker_port}")
+            print(f"📋 Formato: SenML (RFC 8428)")
             print("=" * 60 + "\n")
 
             # Connetti al broker
@@ -352,7 +489,7 @@ if __name__ == "__main__":
     import argparse
 
     # Parser argomenti da linea di comando
-    parser = argparse.ArgumentParser(description='Simulatore pompa insulina')
+    parser = argparse.ArgumentParser(description='Simulatore pompa insulina SenML')
     parser.add_argument('--patient-id', type=str, default='patient_001',
                         help='ID del paziente')
     parser.add_argument('--pump-id', type=str, default='pump_001',
@@ -364,8 +501,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # Crea la pompa
-    pump = InsulinPumpActuator(
+    # Crea la pompa con supporto SenML
+    pump = InsulinPumpActuatorSenML(
         pump_id=args.pump_id,
         patient_id=args.patient_id,
         initial_insulin=args.initial_insulin,
@@ -376,6 +513,6 @@ if __name__ == "__main__":
     pump.start()
 
     # Esempi di utilizzo:
-    # python insulin_pump_actuator.py
-    # python insulin_pump_actuator.py --initial-insulin 200
-    # python insulin_pump_actuator.py --patient-id patient_002 --pump-id pump_002
+    # python insulin_pump_actuator_senml.py
+    # python insulin_pump_actuator_senml.py --initial-insulin 200
+    # python insulin_pump_actuator_senml.py --patient-id patient_002 --pump-id pump_002
