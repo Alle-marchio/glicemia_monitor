@@ -101,9 +101,17 @@ class GlucoseSensorData:
         return json.dumps(self, default=lambda o: o.__dict__)
 
     def to_senml(self):
-        return SenMLHelper.create_glucose_measurement(
+        return SenMLHelper.create_glucose_sensor_full_data(
             patient_id=self.patient_id,
+            sensor_id=self.sensor_id,
             glucose_value=self.glucose_value,
-            trend=self.trend_direction,
-            timestamp=self.timestamp
+            glucose_status=self.glucose_status,
+            trend_direction=self.trend_direction,
+            trend_rate=self.trend_rate,
+            battery_level=self.battery_level,
+            signal_strength=self.signal_strength,
+            sensor_status=self.sensor_status,
+            confidence_level=self.confidence_level,
+            timestamp=float(self.timestamp),
+            calibration_needed=self.calibration_needed
         )

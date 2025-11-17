@@ -8,46 +8,6 @@ class SenMLHelper:
     Classe helper per creare e gestire messaggi in formato SenML (Sensor Markup Language)
     Seguendo la specifica RFC 8428
     """
-
-    @staticmethod
-    def create_glucose_measurement(patient_id: str, glucose_value: float,
-                                   trend: str = "stable", timestamp: float = None) -> str:
-        """
-        Crea un messaggio SenML per una misurazione della glicemia
-
-        Args:
-            patient_id: ID del paziente
-            glucose_value: Valore glicemia in mg/dL
-            trend: Tendenza ("rising", "falling", "stable")
-            timestamp: Timestamp UNIX (se None, usa tempo corrente)
-
-        Returns:
-            Stringa JSON in formato SenML
-        """
-        if timestamp is None:
-            timestamp = time.time()
-
-        base_name = f"urn:patient:{patient_id}:glucose:"
-
-        senml_record = [
-            {
-                "bn": base_name,  # Base Name
-                "bt": timestamp,  # Base Time
-                "bu": "mg/dL"  # Base Unit
-            },
-            {
-                "n": "level",  # Name
-                "v": glucose_value,  # Value
-                "t": 0  # Time offset from base time
-            },
-            {
-                "n": "trend",  # Name
-                "vs": trend  # Value String
-            }
-        ]
-
-        return json.dumps(senml_record)
-
     @staticmethod
     def create_glucose_sensor_full_data(patient_id: str, sensor_id: str,
                                         glucose_value: float, glucose_status: str,
@@ -55,6 +15,7 @@ class SenMLHelper:
                                         battery_level: float, signal_strength: int,
                                         sensor_status: str = "active",  # NUOVO
                                         confidence_level: float = 1.0,  # NUOVO
+                                        calibration_needed: bool = False,  # NUOVO
                                         timestamp: float = None) -> str:
         """
         Crea un messaggio SenML completo con tutti i dati del sensore glicemia
@@ -84,7 +45,7 @@ class SenMLHelper:
             {
                 "bn": base_name,  # Base Name
                 "bt": timestamp,  # Base Time
-                "bu": "mg/dL"     # Base Unit per glicemia
+                #"bu": "mg/dL"     # Base Unit per glicemia
             },
             {
                 "n": "level",     # Livello glicemia
@@ -127,6 +88,10 @@ class SenMLHelper:
                 "v": confidence_level,
                 "u": "ratio",  # Valore 0-1
                 "t": 0
+            },
+            {
+                "n": "calibration_needed", # Necessità di calibrazione
+                "vb": calibration_needed,  # Valore booleano
             }
         ]
 
