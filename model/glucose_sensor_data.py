@@ -5,7 +5,7 @@ from utils.senml_helper import SenMLHelper
 from conf.mqtt_conf_params import MqttConfigurationParameters as Config
 
 class GlucoseSensorData:
-    """Dati del sensore di glucosio con informazioni complete"""
+    """Modello completo del sensore di glucosio, con tutta la logica interna di aggiornamento."""
 
     def __init__(self, sensor_id, patient_id, glucose_value=100.0):
         # Identificazione
@@ -13,27 +13,30 @@ class GlucoseSensorData:
         self.patient_id = patient_id
 
         # Dati glicemici
-        self.glucose_value = glucose_value  # mg/dL
+        self.glucose_value = glucose_value
         self.glucose_status = self._determine_glucose_status(glucose_value)
 
         # Metadati sensore
         self.sensor_status = "active"
-        self.battery_level = 100.0  # percentuale 0-100
+        self.battery_level = 100.0  # %
         self.signal_strength = -45  # dBm
 
         # Timestamp
         self.timestamp = int(time.time())
 
-        # Informazioni di contesto
-        self.trend_direction = "stable"  # "rising", "falling", "stable"
-        self.trend_rate = 0.0  # mg/dL per minuto
+        # Trend
+        self.trend_direction = "stable"
+        self.trend_rate = 0.0  # mg/dL/min
 
         # Qualità del dato
-        self.confidence_level = 1.0  # 0-1, dove 1 è massima confidenza
+        self.confidence_level = 1.0  # 0–1
         self.calibration_needed = False
 
+    # -------------------------------------------------------
+    # DETERMINAZIONE DELLO STATO GLICEMICO
+    # -------------------------------------------------------
     def _determine_glucose_status(self, glucose_value):
-        """Determina lo status basato sul valore glicemico"""
+        """Determina lo stato glicemico rispetto alle soglie del sistema."""
         if glucose_value < Config.GLUCOSE_CRITICAL_LOW:
             return "critical_low"
         elif glucose_value < Config.GLUCOSE_LOW_THRESHOLD:
@@ -45,41 +48,57 @@ class GlucoseSensorData:
         else:
             return "normal"
 
-    def update_measurements(self):
-        """Aggiorna le misurazioni simulando letture reali del sensore"""
-        # Simula variazioni naturali della glicemia
-        variation = random.uniform(-10.0, 10.0)
-        self.glucose_value = max(40.0, min(400.0, self.glucose_value + variation))
+    # -------------------------------------------------------
+    # METODO CENTRALE: APPLICA UNA VARIAZIONE
+    # -------------------------------------------------------
+    def apply_variation(self, variation: float, reading_interval: float):
+        """
+        Applica una variazione di glicemia e aggiorna TUTTI
+        i parametri del sensore in modo coerente.
+        Questo elimina duplicazione dal simulatore.
+        """
 
-        # Aggiorna lo status
-        self.glucose_status = self._determine_glucose_status(self.glucose_value)
+        # Aggiorna glicemia entro range realistico
+        new_value = max(40.0, min(400.0, self.glucose_value + variation))
+        self.glucose_value = new_value
 
-        # Simula trend
+        # Stato glicemico
+        self.glucose_status = self._determine_glucose_status(new_value)
+
+        # Trend
         if variation > 3:
             self.trend_direction = "rising"
-            self.trend_rate = abs(variation) / 5.0
+            self.trend_rate = abs(variation) / (reading_interval / 60.0)
         elif variation < -3:
             self.trend_direction = "falling"
-            self.trend_rate = abs(variation) / 5.0
+            self.trend_rate = abs(variation) / (reading_interval / 60.0)
         else:
             self.trend_direction = "stable"
             self.trend_rate = 0.0
 
-        # Simula degradazione batteria
-        self.battery_level = max(0.0, self.battery_level - random.uniform(0.0, 0.1))
+        # Batteria (degradazione naturale)
+        self.battery_level = max(0.0, self.battery_level - random.uniform(0.01, 0.05))
 
-        # Aggiorna timestamp
+        # Qualità segnale
+        self.signal_strength = random.randint(-60, -40)
+
+        # Timestamp aggiornato
         self.timestamp = int(time.time())
 
+    # -------------------------------------------------------
+    # METODI DI UTILITÀ
+    # -------------------------------------------------------
     def is_critical(self):
-        """Verifica se la lettura è in stato critico"""
+        """True se glicemia in stato critico."""
         return self.glucose_status in ["critical_low", "critical_high"]
 
     def requires_immediate_action(self):
-        """Verifica se la lettura richiede azione immediata"""
-        return (self.is_critical() or
-                self.glucose_status in ["low", "high"] or
-                self.sensor_status == "error")
+        """Verifica condizioni per intervento immediato."""
+        return (
+            self.is_critical()
+            or self.glucose_status in ["low", "high"]
+            or self.sensor_status == "error"
+        )
 
     def get_alert_level(self):
         """Restituisce il livello di allerta"""
@@ -96,11 +115,14 @@ class GlucoseSensorData:
         else:
             return "NORMAL"
 
+    # -------------------------------------------------------
+    # SERIALIZZAZIONE
+    # -------------------------------------------------------
     def to_json(self):
-        """Converte in JSON per invio MQTT"""
         return json.dumps(self, default=lambda o: o.__dict__)
 
     def to_senml(self):
+        """Genera un SenML completo tramite l'helper."""
         return SenMLHelper.create_glucose_sensor_full_data(
             patient_id=self.patient_id,
             sensor_id=self.sensor_id,
@@ -112,6 +134,6 @@ class GlucoseSensorData:
             signal_strength=self.signal_strength,
             sensor_status=self.sensor_status,
             confidence_level=self.confidence_level,
-            timestamp=float(self.timestamp),
-            calibration_needed=self.calibration_needed
+            calibration_needed=self.calibration_needed,
+            timestamp=float(self.timestamp)
         )

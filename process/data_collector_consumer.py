@@ -51,7 +51,7 @@ class DataCollectorConsumerSenML:
 
         # Safety limits
         self.max_bolus_dose = 15.0  # Unità massime per singolo bolo
-        self.min_time_between_corrections = 180  # 3 ore in secondi
+        self.min_time_between_corrections = 180  # 3 minuti in secondi
         self.last_correction_time = 0
 
     def on_connect(self, client, userdata, flags, rc):
