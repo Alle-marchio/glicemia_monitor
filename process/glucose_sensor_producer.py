@@ -11,6 +11,12 @@ from model.glucose_sensor_data import GlucoseSensorData
 from conf.mqtt_conf_params import MqttConfigurationParameters as Config
 from utils.senml_helper import SenMLHelper
 
+# Parametri di default
+DEFAULT_PATIENT_ID = "patient_001"
+DEFAULT_SENSOR_ID = "sensor_001"
+DEFAULT_INITIAL_GLUCOSE = 120.0
+DEFAULT_MODE = "normal"  # normal, hypoglycemia, hyperglycemia, fluctuating
+
 
 class GlucoseSensorProducerSenML:
     """
@@ -134,10 +140,7 @@ class GlucoseSensorProducerSenML:
             if reading.is_critical():
                 print("🚨 Valore critico!")
 
-            if result.rc == mqtt.MQTT_ERR_SUCCESS:
-                preview = senml_json[:150] + "..." if len(senml_json) > 150 else senml_json
-                print(f"✅ SenML pubblicato: {preview}")
-            else:
+            if result.rc != mqtt.MQTT_ERR_SUCCESS:
                 print(f"⚠️ Errore pubblicazione: rc={result.rc}")
 
         except Exception as e:
@@ -218,40 +221,20 @@ class GlucoseSensorProducerSenML:
         print("✅ Sensore disconnesso")
 
 
-# MAIN - Esempi di utilizzo
+# MAIN - Avvio automatico del sensore
 if __name__ == "__main__":
-    import argparse
 
-    parser = argparse.ArgumentParser(description='Simulatore sensore glicemia SenML')
-    parser.add_argument('--patient-id', type=str, default='patient_001',
-                        help='ID del paziente')
-    parser.add_argument('--sensor-id', type=str, default='sensor_001',
-                        help='ID del sensore')
-    parser.add_argument('--initial-glucose', type=float, default=120.0,
-                        help='Valore glicemia iniziale (mg/dL)')
-    parser.add_argument('--mode', type=str, default='normal',
-                        choices=['normal', 'hypoglycemia', 'hyperglycemia', 'fluctuating'],
-                        help='Modalità di simulazione')
-    parser.add_argument('--readings', type=int, default=None,
-                        help='Numero di letture da eseguire (default: infinito)')
+    print("\n" + "=" * 60)
+    print("🚀 AVVIO SIMULATORE SENSORE GLICEMIA (SenML)")
+    print("=" * 60)
 
-    args = parser.parse_args()
-
-    # Crea il sensore con supporto SenML
+    # Crea il sensore
     sensor = GlucoseSensorProducerSenML(
-        sensor_id=args.sensor_id,
-        patient_id=args.patient_id,
-        initial_glucose=args.initial_glucose,
-        simulation_mode=args.mode
+        sensor_id=DEFAULT_SENSOR_ID,
+        patient_id=DEFAULT_PATIENT_ID,
+        initial_glucose=DEFAULT_INITIAL_GLUCOSE,
+        simulation_mode=DEFAULT_MODE
     )
 
-    # Esegui in base ai parametri
-    if args.readings:
-        sensor.run_n_readings(args.readings)
-    else:
-        sensor.run_continuous()
-
-    # Esempi di utilizzo:
-    # python glucose_sensor_producer_senml.py --mode normal
-    # python glucose_sensor_producer_senml.py --mode hyperglycemia --initial-glucose 200
-    # python glucose_sensor_producer_senml.py --readings 20 --mode hypoglycemia
+    # Avvio continuo (infinito)
+    sensor.run_continuous()
