@@ -2,7 +2,7 @@ import json
 import time
 import random
 from utils.senml_helper import SenMLHelper
-
+from conf.mqtt_conf_params import MqttConfigurationParameters as conf
 
 class GlucoseSensorData:
     """Dati del sensore di glucosio con informazioni complete"""
@@ -34,14 +34,14 @@ class GlucoseSensorData:
 
     def _determine_glucose_status(self, glucose_value):
         """Determina lo status basato sul valore glicemico"""
-        if glucose_value < 40.0:
+        if glucose_value < conf.GLUCOSE_CRITICAL_LOW:
             return "critical_low"
-        elif glucose_value < 60.0:
+        elif glucose_value < conf.GLUCOSE_LOW_THRESHOLD:
             return "low"
-        elif glucose_value > 250.0:
-            return "high"
-        elif glucose_value > 400.0:
+        elif glucose_value > conf.GLUCOSE_CRITICAL_HIGH:
             return "critical_high"
+        elif glucose_value > conf.GLUCOSE_HIGH_THRESHOLD:
+            return "high"
         else:
             return "normal"
 

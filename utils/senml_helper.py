@@ -50,10 +50,12 @@ class SenMLHelper:
 
     @staticmethod
     def create_glucose_sensor_full_data(patient_id: str, sensor_id: str,
-                                       glucose_value: float, glucose_status: str,
-                                       trend_direction: str, trend_rate: float,
-                                       battery_level: float, signal_strength: int,
-                                       timestamp: float = None) -> str:
+                                        glucose_value: float, glucose_status: str,
+                                        trend_direction: str, trend_rate: float,
+                                        battery_level: float, signal_strength: int,
+                                        sensor_status: str = "active",  # NUOVO
+                                        confidence_level: float = 1.0,  # NUOVO
+                                        timestamp: float = None) -> str:
         """
         Crea un messaggio SenML completo con tutti i dati del sensore glicemia
 
@@ -66,6 +68,8 @@ class SenMLHelper:
             trend_rate: Velocità cambio glicemia (mg/dL/min)
             battery_level: Livello batteria sensore (%)
             signal_strength: Forza segnale (dBm)
+            sensor_status: Stato del sensore ("active", "inactive", "error")
+            confidence_level: Livello di confidenza del dato (0-1)
             timestamp: Timestamp UNIX (se None, usa tempo corrente)
 
         Returns:
@@ -111,6 +115,17 @@ class SenMLHelper:
                 "n": "signal",    # Forza segnale
                 "v": signal_strength,
                 "u": "dBm",
+                "t": 0
+            },
+            {
+                "n": "sensor_status", # Stato del sensore
+                "vs": sensor_status,
+                "t": 0
+            },
+            {
+                "n": "confidence", # Livello di confidenza
+                "v": confidence_level,
+                "u": "ratio",  # Valore 0-1
                 "t": 0
             }
         ]

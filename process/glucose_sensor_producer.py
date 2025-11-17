@@ -140,6 +140,8 @@ class GlucoseSensorProducerSenML:
             trend_rate=reading.trend_rate,
             battery_level=reading.battery_level,
             signal_strength=reading.signal_strength,
+            sensor_status=reading.sensor_status,
+            confidence_level=reading.confidence_level,
             timestamp=float(reading.timestamp)
         )
 
