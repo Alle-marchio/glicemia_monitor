@@ -77,7 +77,7 @@ class GlucoseSensorData:
             self.trend_rate = 0.0
 
         # Batteria (degradazione naturale)
-        self.battery_level = max(0.0, self.battery_level - random.uniform(0.01, 0.05))
+        self.battery_level = max(0.0, self.battery_level - random.uniform(0.1, 0.2))
 
         # Qualità segnale
         self.signal_strength = random.randint(-60, -40)

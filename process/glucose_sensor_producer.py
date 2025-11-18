@@ -1,15 +1,13 @@
 import paho.mqtt.client as mqtt
-import json
 import time
 import sys
 import os
-import random
 
 # Import dei modelli
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from model.glucose_sensor_data import GlucoseSensorData
 from conf.mqtt_conf_params import MqttConfigurationParameters as Config
-from utils.senml_helper import SenMLHelper
+from model.glucose_simulation_logic import GlucoseSimulationLogic
 
 # Parametri di default
 DEFAULT_PATIENT_ID = "patient_001"
@@ -20,7 +18,7 @@ DEFAULT_MODE = "normal"  # normal, hypoglycemia, hyperglycemia, fluctuating
 
 class GlucoseSensorProducerSenML:
     """
-    Sensore glicemia simulato (versione rifattorizzata):
+    Sensore glicemia simulato:
     - La logica del sensore è nel modello
     - Qui si decide solo la modalità e la variation da applicare
     """
@@ -68,37 +66,18 @@ class GlucoseSensorProducerSenML:
             print(f"⚠️ Disconnessione inattesa (rc={rc})")
 
     # ---------------------------------------------------------------------
-    # LOGICA SIMULATIVA (SOLO VARIATION)
+    # LOGICA SIMULATIVA
     # ---------------------------------------------------------------------
-    def _generate_variation(self):
-        """Genera una variazione della glicemia in base alla modalità scelto."""
-
-        current_value = self.sensor.glucose_value
-
-        if self.simulation_mode == "normal":
-            target = random.uniform(90, 130)
-            return (target - current_value) * 0.1 + random.uniform(-5, 5)
-
-        elif self.simulation_mode == "hypoglycemia":
-            v = random.uniform(-8, -2)
-            if random.random() < 0.1:
-                v = random.uniform(2, 8)
-            return v
-
-        elif self.simulation_mode == "hyperglycemia":
-            v = random.uniform(2, 10)
-            if random.random() < 0.1:
-                v = random.uniform(-8, -2)
-            return v
-
-        elif self.simulation_mode == "fluctuating":
-            return random.uniform(-15, 15)
-
-        return random.uniform(-7, 7)
-
     def simulate_glucose_reading(self):
-        """Genera una lettura completa delegando la logica al modello."""
-        variation = self._generate_variation()
+        """Genera una lettura completa, delegando la variazione alla logica di simulazione."""
+
+        # CHIAMA LA LOGICA DI SIMULAZIONE ESTERNA per ottenere la variazione
+        variation = GlucoseSimulationLogic.generate_variation(
+            current_value=self.sensor.glucose_value,
+            simulation_mode=self.simulation_mode
+        )
+
+        # APPLICA LA VARIAZIONE al modello (metodo apply_variation del modello)
         self.sensor.apply_variation(variation, self.reading_interval)
         return self.sensor
 
@@ -130,13 +109,13 @@ class GlucoseSensorProducerSenML:
             status_emoji = self._get_status_emoji(reading.glucose_status)
             trend_emoji = self._get_trend_emoji(reading.trend_direction)
 
-            print(f"\n📊 Lettura #{self.reading_count} (SenML)")
+            print(f"\n📊 Lettura glicemia #{self.reading_count} (SenML)")
             print(f"🩸 Glicemia: {reading.glucose_value:.1f} mg/dL {status_emoji}")
             print(f"📈 Status: {reading.glucose_status}")
             print(f"{trend_emoji} Trend: {reading.trend_direction} ({reading.trend_rate:.1f} mg/dL/min)")
-            print(f"🔋 Batteria: {reading.battery_level:.1f}%")
+            print(f"🔋 Batteria sensore glicemia: {reading.battery_level:.1f}%")
             print(f"📡 Segnale: {reading.signal_strength} dBm")
-
+            print("-" * 40)
             if reading.is_critical():
                 print("🚨 Valore critico!")
 
@@ -151,11 +130,11 @@ class GlucoseSensorProducerSenML:
     # ---------------------------------------------------------------------
     def _get_status_emoji(self, status):
         return {
-            "critical_low": "🔴🔻",
-            "low": "🟡⬇️",
-            "normal": "🟢✅",
-            "high": "🟡⬆️",
-            "critical_high": "🔴🔺"
+            "critical_low": "🔴🔻🔻",
+            "low": "🔴🔻",
+            "normal": "🟢",
+            "high": "🔴🔺",
+            "critical_high": "🔴🔺🔺"
         }.get(status, "⚪")
 
     def _get_trend_emoji(self, trend):
@@ -193,6 +172,7 @@ class GlucoseSensorProducerSenML:
             print("\n⏹️ Interrotto dall'utente")
             self.stop()
 
+    ''' funzione deprecata
     def run_n_readings(self, n):
         try:
             print("\n" + "=" * 60)
@@ -213,21 +193,14 @@ class GlucoseSensorProducerSenML:
         except KeyboardInterrupt:
             print("\n⏹️ Interrotto dall'utente")
             self.stop()
-
+    '''
     def stop(self):
         print("\n🛑 Arresto sensore...")
         self.client.loop_stop()
         self.client.disconnect()
         print("✅ Sensore disconnesso")
 
-
-# MAIN - Avvio automatico del sensore
 if __name__ == "__main__":
-
-    print("\n" + "=" * 60)
-    print("🚀 AVVIO SIMULATORE SENSORE GLICEMIA (SenML)")
-    print("=" * 60)
-
     # Crea il sensore
     sensor = GlucoseSensorProducerSenML(
         sensor_id=DEFAULT_SENSOR_ID,
@@ -236,5 +209,4 @@ if __name__ == "__main__":
         simulation_mode=DEFAULT_MODE
     )
 
-    # Avvio continuo (infinito)
     sensor.run_continuous()
