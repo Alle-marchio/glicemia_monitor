@@ -22,6 +22,9 @@ class DataCollectorConsumerSenML:
     - Invia comandi alla pompa insulina in formato SenML compatibile
     - Genera notifiche in formato SenML
     """
+    # Tempo di azione dell'insulina (3 ore, 180 minuti) - DEVE ESSERE COERENTE CON IL SENSORE!
+    # L'hai impostato a 60 secondi per la simulazione rapida (1 minuto).
+    INSULIN_DURATION_SECONDS = 60.0  # 1 minuto (tempo di azione rapido per simulazione)
 
     def __init__(self, patient_id, patient_descriptor):
         self.patient_id = patient_id
@@ -91,6 +94,35 @@ class DataCollectorConsumerSenML:
         except Exception as e:
             print(f"❌ Errore nell'elaborazione del messaggio SenML: {e}")
 
+        # ---------------------------------------------------------------------
+        # LOGICA IOB (Insulin-on-Board)
+        # ---------------------------------------------------------------------
+    def calculate_iob(self, current_time):
+            """
+            Calcola l'Insulin-on-Board (IOB) tracciando i comandi inviati.
+
+            Si assume una degradazione lineare dell'insulina nell'arco di INSULIN_DURATION_SECONDS.
+            """
+
+            iob_units = 0.0
+            new_commands_sent = []
+
+            for command in self.insulin_commands_sent:
+                elapsed = current_time - command['timestamp']
+
+                if elapsed < self.INSULIN_DURATION_SECONDS:
+                    # IOB rimanente proporzionale al tempo rimanente
+                    time_remaining = self.INSULIN_DURATION_SECONDS - elapsed
+                    iob_ratio = time_remaining / self.INSULIN_DURATION_SECONDS
+
+                    iob_units += command['amount'] * iob_ratio
+                    new_commands_sent.append(command)
+
+            # Mantieni solo i comandi ancora attivi per la prossima iterazione
+            self.insulin_commands_sent[:] = new_commands_sent
+
+            return iob_units
+
     def process_glucose_data(self, data, timestamp):
         """Elabora i dati SenML del sensore glicemia"""
         print("\n" + "=" * 60)
@@ -117,7 +149,7 @@ class DataCollectorConsumerSenML:
         alert_message = ""
         priority = "normal"
 
-        # 1️⃣ IPOGLICEMIA
+        # IPOGLICEMIA
         if self.patient.is_hypoglycemic(glucose_value):
             if glucose_value < 50:
                 alert_level = "EMERGENCY_LOW"
@@ -132,37 +164,66 @@ class DataCollectorConsumerSenML:
             self.send_notification(alert_level, alert_message, "critical" if glucose_value < 50 else "high")
             action_needed = False
 
-        # 2️⃣ IPERGLICEMIA
-        elif self.patient.is_hyperglycemic(glucose_value):
+        # IPERGLICEMIA
+        elif glucose_value > self.patient.target_glucose_max:
+
             target_glucose = (self.patient.target_glucose_min + self.patient.target_glucose_max) / 2
-            insulin_dose = self.patient.calculate_insulin_dose(glucose_value, target_glucose)
+
+            # Calcola la dose totale NECESSARIA (senza considerare l'insulina attiva)
+            insulin_dose_needed = self.patient.calculate_insulin_dose(glucose_value, target_glucose)
+
+            # Calcola l'Insulin-on-Board (IOB)
+            iob = self.calculate_iob(time.time())
+
+            # Calcola la dose finale: Dose necessaria - IOB
+            insulin_dose = max(0.0, insulin_dose_needed - iob)
+
+            # Usiamo la soglia del paziente (200.0 mg/dL) solo per determinare la SEVERITÀ del messaggio
+            is_critical_hyper = self.patient.is_hyperglycemic(glucose_value)  # True se Glicemia > 200.0
+
             time_since_last_correction = time.time() - self.last_correction_time
 
+            print(f"   [DBG] Dose necessaria (senza IOB): {insulin_dose_needed:.2f}U")
+            print(f"   [DBG] Insulina Attiva (IOB): {iob:.2f}U")
+            print(f"   [DBG] Dose finale da somministrare: {insulin_dose:.2f}U")
+
+            # La condizione di erogazione: Dose > 0 E tempo minimo trascorso
             if insulin_dose > 0 and time_since_last_correction > self.min_time_between_corrections:
+
+                # Applica il limite massimo di bolo
                 insulin_dose = min(insulin_dose, self.max_bolus_dose)
                 action_needed = True
 
-                if glucose_value > 250:
+                # Aggiorna il messaggio in base al livello di severità
+                if glucose_value > 250 or is_critical_hyper:
                     alert_level = "EMERGENCY_HIGH"
                     alert_message = f"🚨 IPERGLICEMIA CRITICA: {glucose_value:.1f} mg/dL - Somministrazione {insulin_dose:.2f}U insulina"
                     priority = "emergency"
                 else:
+                    # Glicemia > 140 ma <= 200
                     alert_level = "WARNING_HIGH"
-                    alert_message = f"⚠️ IPERGLICEMIA: {glucose_value:.1f} mg/dL - Correzione con {insulin_dose:.2f}U insulina"
+                    alert_message = f"⚠️ GLICEMIA ALTA: {glucose_value:.1f} mg/dL - Correzione con {insulin_dose:.2f}U insulina"
                     priority = "high"
 
-                print(f"\n💉 Dose insulina calcolata: {insulin_dose:.2f} unità")
+                print(f"\n💉 Dose insulina calcolata (netta): {insulin_dose:.2f} unità")
                 print(f"🎯 Target glicemico: {target_glucose:.1f} mg/dL")
                 print(f"⚡ Priorità comando: {priority}")
 
                 self.send_notification(alert_level, alert_message, "critical" if glucose_value > 250 else "high")
 
+            elif insulin_dose_needed > 0 and insulin_dose <= 0:
+                # Caso in cui IOB è sufficiente e non serve altra insulina
+                print(f"✅ IOB sufficiente ({iob:.2f}U) - Nessuna correzione necessaria al momento.")
+                self.send_notification("INFO", "✅ Iperglicemia rilevata ma IOB sufficiente. Monitoraggio in corso.",
+                                       "low")
+
             elif insulin_dose > 0:
+                # Caso in cui serve insulina ma il tempo minimo tra le correzioni non è trascorso
                 remaining = self.min_time_between_corrections - time_since_last_correction
                 print(f"⏳ Attesa tra correzioni: {remaining:.0f}s rimanenti")
                 self.send_notification("INFO", "⏳ Iperglicemia rilevata ma in attesa prima di nuova correzione", "low")
 
-        # 3️⃣ VALORI NORMALI
+        # VALORI NORMALI
         else:
             print(
                 f"✅ Glicemia nel range target ({self.patient.target_glucose_min}-{self.patient.target_glucose_max} mg/dL)")
