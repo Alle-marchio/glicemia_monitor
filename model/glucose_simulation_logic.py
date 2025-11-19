@@ -53,7 +53,7 @@ class GlucoseSimulationLogic:
 
         # Simulazione semplificata:
         # Tempo di azione dell'insulina rapida (es. 3 ore)
-        INSULIN_DURATION = 3.0 * 3600  # 3 ore in secondi
+        INSULIN_DURATION = 1.0 * 60  # 3 ore in secondi prima era = 3*3600
 
         total_effect = 0.0
         new_active_doses = []

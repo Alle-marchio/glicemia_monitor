@@ -2,17 +2,19 @@ import paho.mqtt.client as mqtt
 import time
 import sys
 import os
+import json
 
 # Import dei modelli
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from model.glucose_sensor_data import GlucoseSensorData
 from conf.mqtt_conf_params import MqttConfigurationParameters as Config
 from model.glucose_simulation_logic import GlucoseSimulationLogic
+from utils.senml_helper import SenMLHelper
 
 # Parametri di default
 DEFAULT_PATIENT_ID = "patient_001"
 DEFAULT_SENSOR_ID = "sensor_001"
-DEFAULT_INITIAL_GLUCOSE = 120.0
+DEFAULT_INITIAL_GLUCOSE = 320.0
 DEFAULT_MODE = "normal"  # normal, hypoglycemia, hyperglycemia, fluctuating
 
 
@@ -38,15 +40,22 @@ class GlucoseSensorProducerSenML:
         # Topic MQTT
         self.base_topic = f"/iot/patient/{patient_id}"
         self.publish_topic = f"{self.base_topic}/glucose/sensor/data"
+        self.command_topic = f"{self.base_topic}/insulin/pump/command"
 
         # Letture
         self.reading_interval = Config.GLUCOSE_READING_INTERVAL
         self.simulation_mode = simulation_mode
         self.reading_count = 0
 
+        # Parametri per l'effetto insulina
+        self.active_insulin_doses = []  # Lista di [{'amount': X, 'start_time': Y}]
+        # Usa il fattore di sensibilità dalle configurazioni globali
+        self.insulin_sensitivity_factor = Config.INSULIN_CORRECTION_FACTOR
+
         # Callbacks
         self.client.on_connect = self.on_connect
         self.client.on_disconnect = self.on_disconnect
+        self.client.on_message = self.on_message  # Abilitiamo la ricezione di messaggi
 
     # ---------------------------------------------------------------------
     # MQTT CALLBACKS
@@ -55,15 +64,43 @@ class GlucoseSensorProducerSenML:
         if rc == 0:
             print(f"✅ Sensore glicemia (SenML) connesso al broker MQTT")
             print(f"📡 Topic pubblicazione: {self.publish_topic}")
-            print(f"⏱️  Intervallo letture: {self.reading_interval}s")
+            print(f"📥 Subscribing a: {self.command_topic}")
+            print(f"⏱️ Intervallo letture: {self.reading_interval}s")
             print(f"🎭 Modalità: {self.simulation_mode}")
             print("=" * 60)
+
+            client.subscribe(self.command_topic, qos=Config.QOS_COMMANDS)
         else:
             print(f"❌ Connessione fallita: rc={rc}")
 
     def on_disconnect(self, client, userdata, rc):
         if rc != 0:
             print(f"⚠️ Disconnessione inattesa (rc={rc})")
+
+    def on_message(self, client, userdata, msg):
+        """Callback quando arriva un comando MQTT (gestisce l'insulina erogata)"""
+        try:
+            topic = msg.topic
+            payload = msg.payload.decode()
+
+            if "insulin/pump/command" in topic:
+                # Parse del comando SenML per estrarre la dose
+                parsed_senml = SenMLHelper.parse_senml(payload)
+                data = parsed_senml.get("measurements", {})
+
+                dose = data.get("dose", {}).get("value", 0.0)
+                delivery_type = data.get("type", {}).get("value", "bolus")
+
+                # Registra la dose se è un bolo o una correzione valida
+                if dose > 0 and delivery_type in ["bolus", "correction"]:
+                    self.active_insulin_doses.append({
+                        'amount': dose,
+                        'start_time': time.time()
+                    })
+                    print(f"💉 Sensore: Registrata dose {dose:.2f}U di insulina per simulazione effetto.")
+
+        except Exception as e:
+            print(f"❌ Errore nell'elaborazione del comando SenML in Sensore: {e}")
 
     # ---------------------------------------------------------------------
     # LOGICA SIMULATIVA
@@ -72,13 +109,26 @@ class GlucoseSensorProducerSenML:
         """Genera una lettura completa, delegando la variazione alla logica di simulazione."""
 
         # CHIAMA LA LOGICA DI SIMULAZIONE ESTERNA per ottenere la variazione
-        variation = GlucoseSimulationLogic.generate_variation(
+        natural_variation = GlucoseSimulationLogic.generate_variation(
             current_value=self.sensor.glucose_value,
             simulation_mode=self.simulation_mode
         )
+        # CALCOLA L'EFFETTO DELL'INSULINA ATTIVA
+        insulin_effect = GlucoseSimulationLogic.calculate_insulin_effect(
+            active_insulin_doses=self.active_insulin_doses,
+            isf=self.insulin_sensitivity_factor,
+            current_time=time.time(),
+            reading_interval=self.reading_interval
+        )
 
-        # APPLICA LA VARIAZIONE al modello (metodo apply_variation del modello)
-        self.sensor.apply_variation(variation, self.reading_interval)
+        total_variation = natural_variation + insulin_effect
+
+        # Log per debug (opzionale, ma utile per l'esame)
+        if insulin_effect < -0.1:
+            print(f"   [DBG] Var. Naturale: {natural_variation:.1f}, Effetto Insulina: {insulin_effect:.1f}")
+
+        # APPLICA LA VARIAZIONE al modello
+        self.sensor.apply_variation(total_variation, self.reading_interval)
         return self.sensor
 
     # ---------------------------------------------------------------------

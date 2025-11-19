@@ -48,5 +48,5 @@ class MqttConfigurationParameters(object):
 
     # Parametri insulina
     INSULIN_UNITS_PER_CARB = 1.0 / 15.0  # 1 unità per 15g carboidrati
-    INSULIN_CORRECTION_FACTOR = 50  # 1 unità riduce glicemia di 50 mg/dL
+    INSULIN_CORRECTION_FACTOR = 50  # 1 unità riduce glicemia di 50 mg/dL, alzato solo per test
     TARGET_GLUCOSE = 100  # Target glicemico
