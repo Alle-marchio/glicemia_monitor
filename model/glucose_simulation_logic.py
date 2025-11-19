@@ -1,5 +1,4 @@
 import random
-from model.glucose_sensor_data import GlucoseSensorData
 
 class GlucoseSimulationLogic:
     """
@@ -7,15 +6,14 @@ class GlucoseSimulationLogic:
     della glicemia in base alla modalità di simulazione.
     """
 
+    #parte assolutamente da cambiare
     @staticmethod
     def generate_variation(current_value: float, simulation_mode: str) -> float:
         """Genera una variazione in base alla modalità scelta."""
 
         if simulation_mode == "normal":
-            # Tende a riportare il valore verso un range normale (90-130)
-            target = random.uniform(90, 130)
-            # Variazione proporzionale alla distanza dal target, più un rumore casuale
-            return (target - current_value) * 0.1 + random.uniform(-5, 5)
+            # Simula una lenta deriva casuale (Random Walk) tipica di un diabetico
+            return random.uniform(-3, 3)
 
         elif simulation_mode == "hypoglycemia":
             # Forte tendenza alla discesa, con piccola probabilità di rialzo
