@@ -9,6 +9,7 @@ import threading
 # Import dei modelli
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from model.insulin_pump_data import InsulinPumpCommand, InsulinPumpStatus
+from model.patient_descriptor import PatientDescriptor
 from conf.mqtt_conf_params import MqttConfigurationParameters as Config
 from utils.senml_helper import SenMLHelper
 
@@ -528,35 +529,41 @@ class InsulinPumpActuatorSenML:
         }
 
 
-# MAIN - Esempi di utilizzo
 if __name__ == "__main__":
-    import argparse
+    import sys
 
-    # Parser argomenti da linea di comando
-    parser = argparse.ArgumentParser(description='Simulatore pompa insulina SenML')
-    parser.add_argument('--patient-id', type=str, default='patient_001',
-                        help='ID del paziente')
-    parser.add_argument('--pump-id', type=str, default='pump_001',
-                        help='ID della pompa')
-    parser.add_argument('--initial-insulin', type=float, default=300.0,
-                        help='Livello iniziale insulina (unità)')
-    parser.add_argument('--initial-battery', type=float, default=100.0,
-                        help='Livello iniziale batteria (percentuale)')
+    # Rimuoviamo l'importazione di argparse
 
-    args = parser.parse_args()
+    # Definisce il percorso di default al file JSON nella cartella conf/
+    CONFIG_FILE_PATH = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        'conf',
+        'patient_config.json'
+    )
+
+    # Valori di default
+    pump_id = 'pump_001'  # Pump ID non è nel config paziente
+    initial_insulin = 300.0
+    initial_battery = 100.0
+
+    # Configurazione paziente - ORA CARICATA DA FILE
+    try:
+        patient = PatientDescriptor.from_json_file(CONFIG_FILE_PATH)
+        patient_id = patient.patient_id
+
+        print(f"✅ Configurazione paziente '{patient.name}' caricata da: {CONFIG_FILE_PATH}")
+
+    except (FileNotFoundError, ValueError) as e:
+        print(f"❌ Errore di caricamento o parsing della configurazione: {e}")
+        sys.exit(1)
 
     # Crea la pompa con supporto SenML
     pump = InsulinPumpActuatorSenML(
-        pump_id=args.pump_id,
-        patient_id=args.patient_id,
-        initial_insulin=args.initial_insulin,
-        initial_battery=args.initial_battery
+        pump_id=pump_id,
+        patient_id=patient_id,
+        initial_insulin=initial_insulin,
+        initial_battery=initial_battery
     )
 
     # Avvia la pompa
     pump.start()
-
-    # Esempi di utilizzo:
-    # python insulin_pump_actuator_senml.py
-    # python insulin_pump_actuator_senml.py --initial-insulin 200
-    # python insulin_pump_actuator_senml.py --patient-id patient_002 --pump-id pump_002

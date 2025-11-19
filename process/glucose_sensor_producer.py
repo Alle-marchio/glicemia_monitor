@@ -7,16 +7,10 @@ import json
 # Import dei modelli
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from model.glucose_sensor_data import GlucoseSensorData
-from conf.mqtt_conf_params import MqttConfigurationParameters as Config
 from model.glucose_simulation_logic import GlucoseSimulationLogic
+from model.patient_descriptor import PatientDescriptor
+from conf.mqtt_conf_params import MqttConfigurationParameters as Config
 from utils.senml_helper import SenMLHelper
-
-# Parametri di default
-DEFAULT_PATIENT_ID = "patient_001"
-DEFAULT_SENSOR_ID = "sensor_001"
-DEFAULT_INITIAL_GLUCOSE = 320.0
-DEFAULT_MODE = "normal"  # normal, hypoglycemia, hyperglycemia, fluctuating
-
 
 class GlucoseSensorProducerSenML:
     """
@@ -222,41 +216,46 @@ class GlucoseSensorProducerSenML:
             print("\n⏹️ Interrotto dall'utente")
             self.stop()
 
-    ''' funzione deprecata
-    def run_n_readings(self, n):
-        try:
-            print("\n" + "=" * 60)
-            print(f"🚀 AVVIO SENSORE GLICEMIA ({n} letture)")
-
-            self.client.connect(self.broker_address, self.broker_port, 60)
-            self.client.loop_start()
-
-            for i in range(n):
-                self.publish_reading()
-                if i < n - 1:
-                    time.sleep(self.reading_interval)
-
-            print(f"✅ Completate {n} letture")
-            time.sleep(1)
-            self.stop()
-
-        except KeyboardInterrupt:
-            print("\n⏹️ Interrotto dall'utente")
-            self.stop()
-    '''
     def stop(self):
         print("\n🛑 Arresto sensore...")
         self.client.loop_stop()
         self.client.disconnect()
         print("✅ Sensore disconnesso")
 
+
 if __name__ == "__main__":
+
+    # Rimuoviamo l'importazione di argparse
+
+    # Definisce il percorso di default al file JSON nella cartella conf/
+    CONFIG_FILE_PATH = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        'conf',
+        'patient_config.json'
+    )
+
+    # Valori di default interni al main (se non specificati nel JSON)
+    initial_glucose = 120.0
+    simulation_mode = "normal"
+    sensor_id = "sensor_001"  # ID del sensore non del paziente
+
+    # Configurazione paziente - ORA CARICATA DA FILE
+    try:
+        patient = PatientDescriptor.from_json_file(CONFIG_FILE_PATH)
+        patient_id = patient.patient_id
+
+        print(f"✅ Configurazione paziente '{patient.name}' caricata da: {CONFIG_FILE_PATH}")
+
+    except (FileNotFoundError, ValueError) as e:
+        print(f"❌ Errore di caricamento o parsing della configurazione: {e}")
+        sys.exit(1)
+
     # Crea il sensore
     sensor = GlucoseSensorProducerSenML(
-        sensor_id=DEFAULT_SENSOR_ID,
-        patient_id=DEFAULT_PATIENT_ID,
-        initial_glucose=DEFAULT_INITIAL_GLUCOSE,
-        simulation_mode=DEFAULT_MODE
+        sensor_id=sensor_id,
+        patient_id=patient_id,
+        initial_glucose=initial_glucose,
+        simulation_mode=simulation_mode
     )
 
     sensor.run_continuous()
