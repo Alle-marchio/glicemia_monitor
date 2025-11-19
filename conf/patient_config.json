@@ -1,0 +1,22 @@
+{
+    "patient_id": "patient_001",
+    "name": "Mario Rossi",
+    "age": 45,
+    "weight": 75.0,
+
+
+    "target_glucose_min": 70.0,
+    "target_glucose_max": 140.0,
+    "hypoglycemia_threshold": 60.0,
+    "hyperglycemia_threshold": 200.0,
+
+
+    "insulin_sensitivity_factor": 50.0,
+    "carb_ratio": 12.0,
+    "basal_insulin_rate": 1.0,
+
+
+    "sensor_reading_interval": 5,
+    "alert_enabled": true,
+    "emergency_contact": "+39 123 456 7890"
+}

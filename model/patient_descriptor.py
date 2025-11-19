@@ -80,3 +80,30 @@ class PatientDescriptor:
             {"n": "alerts_enabled", "vs": str(self.alert_enabled)}
         ])
 
+    @classmethod
+    def from_json_file(cls, file_path):
+        """Crea un'istanza di PatientDescriptor caricando i parametri da un file JSON."""
+        try:
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            raise FileNotFoundError(f"File di configurazione paziente non trovato a: {file_path}")
+        except json.JSONDecodeError:
+            raise ValueError(f"Errore di sintassi nel file JSON: {file_path}")
+
+        return cls(
+            patient_id=data.get("patient_id"),
+            name=data.get("name"),
+            age=data.get("age"),
+            weight=data.get("weight"),
+            target_glucose_min=data.get("target_glucose_min"),
+            target_glucose_max=data.get("target_glucose_max"),
+            hypoglycemia_threshold=data.get("hypoglycemia_threshold"),
+            hyperglycemia_threshold=data.get("hyperglycemia_threshold"),
+            insulin_sensitivity_factor=data.get("insulin_sensitivity_factor"),
+            carb_ratio=data.get("carb_ratio"),
+            basal_insulin_rate=data.get("basal_insulin_rate"),
+            sensor_reading_interval=data.get("sensor_reading_interval"),
+            alert_enabled=data.get("alert_enabled"),
+            emergency_contact=data.get("emergency_contact")
+        )

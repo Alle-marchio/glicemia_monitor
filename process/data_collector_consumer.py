@@ -486,36 +486,24 @@ class DataCollectorConsumerSenML:
 
 # MAIN - Esempio di utilizzo
 if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description='Data Collector con supporto SenML completo')
-    parser.add_argument('--patient-id', type=str, default='patient_001',
-                        help='ID del paziente')
-
-    args = parser.parse_args()
-
-    # Configurazione paziente
-    patient = PatientDescriptor(
-        patient_id=args.patient_id,
-        name="Mario Rossi",
-        age=45,
-        weight=75,
-        target_glucose_min=70.0,
-        target_glucose_max=140.0,
-        hypoglycemia_threshold=60.0,
-        hyperglycemia_threshold=200.0,
-        insulin_sensitivity_factor=50.0,  # 1U riduce glicemia di 50 mg/dL
-        carb_ratio=12.0,
-        basal_insulin_rate=1.0,
-        sensor_reading_interval=5,
-        alert_enabled=True,
-        emergency_contact="+39 123 456 7890"
+    # Definisce il percorso di default al file JSON nella cartella conf/
+    CONFIG_FILE_PATH = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        'conf',
+        'patient_config.json'
     )
 
-    # Avvia Data Collector con supporto SenML
-    collector = DataCollectorConsumerSenML(args.patient_id, patient)
-    collector.start()
+    # Configurazione paziente
+    try:
+        # Carica il descrittore del paziente dal file JSON
+        patient = PatientDescriptor.from_json_file(CONFIG_FILE_PATH)
+        patient_id = patient.patient_id
 
-    # Esempi di utilizzo:
-    # python data_collector_consumer_senml.py
-    # python data_collector_consumer_senml.py --patient-id patient_002
+        print(f"✅ Configurazione paziente '{patient.name}' caricata da: {CONFIG_FILE_PATH}")
+
+    except (FileNotFoundError, ValueError) as e:
+        print(f"❌ Errore di caricamento o parsing della configurazione: {e}")
+        sys.exit(1)
+
+    collector = DataCollectorConsumerSenML(patient_id, patient)
+    collector.start()
