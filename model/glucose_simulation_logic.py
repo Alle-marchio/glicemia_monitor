@@ -34,3 +34,48 @@ class GlucoseSimulationLogic:
             return random.uniform(-15, 15)
 
         return random.uniform(-7, 7) # Fallback
+
+    @staticmethod
+    def calculate_insulin_effect(active_insulin_doses: list, isf: float, current_time: float,
+                                 reading_interval: float) -> float:
+        """
+        Calcola l'effetto di abbassamento della glicemia dovuto all'insulina attiva.
+
+        Args:
+            active_insulin_doses: Lista di {'amount': X, 'start_time': Y}
+            isf: Fattore di Sensibilità all'Insulina (mg/dL per Unità)
+            current_time: Tempo corrente
+            reading_interval: Intervallo di lettura in secondi
+
+        Returns:
+            La variazione negativa di glicemia (mg/dL) da applicare.
+        """
+
+        # Simulazione semplificata:
+        # Tempo di azione dell'insulina rapida (es. 3 ore)
+        INSULIN_DURATION = 3.0 * 3600  # 3 ore in secondi
+
+        total_effect = 0.0
+        new_active_doses = []
+
+        # Calcola l'effetto di ogni dose attiva
+        for dose in active_insulin_doses:
+            elapsed = current_time - dose['start_time']
+
+            if elapsed < INSULIN_DURATION:
+                # Calcoliamo la riduzione potenziale in mg/dL per l'intero bolo
+                total_glucose_reduction = dose['amount'] * isf
+
+                # Calcoliamo la percentuale di effetto nel solo intervallo di lettura
+                # Applichiamo una riduzione uniforme su tutta la durata
+                reduction_per_interval = total_glucose_reduction * (reading_interval / INSULIN_DURATION)
+
+                total_effect -= reduction_per_interval
+                new_active_doses.append(dose)
+            # Se elapsed >= INSULIN_DURATION, la dose viene "dimenticata"
+
+        # Aggiorna la lista di dosi attive (rimuove le scadute)
+        active_insulin_doses[:] = new_active_doses
+
+        # Limita la riduzione per non avere crolli iperbolici in un singolo intervallo
+        return max(-30.0, total_effect)
