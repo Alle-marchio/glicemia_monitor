@@ -93,7 +93,7 @@ def on_message(client, userdata, msg):
 
                 # Aggiungi alla cronologia per il grafico
                 glucose_history.append({'time': timestamp, 'value': round(glucose, 1)})
-                if len(glucose_history) > 30:
+                if len(glucose_history) > Config.DASHBOARD_HISTORY_LIMIT:
                     glucose_history.pop(0)
 
             # Dati Status Pompa
@@ -112,7 +112,7 @@ def on_message(client, userdata, msg):
                     'severity': measurements.get("severity", {}).get("value")
                 })
                 # Mantieni solo gli ultimi 10 alert
-                if len(alert_log) > 10:
+                if len(alert_log) > Config.DASHBOARD_ALERT_LIMIT:
                     alert_log.pop(0)
 
     except Exception as e:
