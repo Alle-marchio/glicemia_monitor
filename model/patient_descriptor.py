@@ -6,10 +6,10 @@ class PatientDescriptor:
     """Descrittore del paziente diabetico con parametri di configurazione"""
 
     def __init__(self, patient_id, name, age, weight,
-                 target_glucose_min=70.0, target_glucose_max=140.0,
-                 hypoglycemia_threshold=60.0, hyperglycemia_threshold=250.0,
-                 insulin_sensitivity_factor=50.0, carb_ratio=12.0, basal_insulin_rate=1.0,
-                 sensor_reading_interval=5, alert_enabled=True, emergency_contact=None):
+                 target_glucose_min, target_glucose_max,
+                 hypoglycemia_threshold, hyperglycemia_threshold,
+                 insulin_sensitivity_factor, carb_ratio, basal_insulin_rate,
+                 sensor_reading_interval, alert_enabled, emergency_contact):
 
         # Identificazione paziente
         self.patient_id = patient_id
