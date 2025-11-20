@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from model.glucose_sensor_data import GlucoseSensorData
 from model.glucose_simulation_logic import GlucoseSimulationLogic
 from model.patient_descriptor import PatientDescriptor
-from conf.mqtt_conf_params import MqttConfigurationParameters as Config
+from conf.SystemConfiguration import SystemConfig as Config
 from utils.senml_helper import SenMLHelper
 
 class GlucoseSensorProducerSenML:
