@@ -20,9 +20,7 @@ class DataCollectorConsumerSenML:
     - Invia comandi alla pompa insulina in formato SenML compatibile
     - Genera notifiche in formato SenML
     """
-    # Tempo di azione dell'insulina (3 ore, 180 minuti) - DEVE ESSERE COERENTE CON IL SENSORE!
-    # L'hai impostato a 60 secondi per la simulazione rapida (1 minuto).
-    INSULIN_DURATION_SECONDS = 60.0  # 1 minuto (tempo di azione rapido per simulazione)
+    INSULIN_DURATION_SECONDS = Config.INSULIN_ACTION_DURATION_SECONDS
 
     def __init__(self, patient_id, patient_descriptor):
         self.patient_id = patient_id
@@ -51,8 +49,8 @@ class DataCollectorConsumerSenML:
         self.client.on_message = self.on_message
 
         # Safety limits
-        self.max_bolus_dose = 15.0  # Unità massime per singolo bolo
-        self.min_time_between_corrections = 180  # 3 minuti in secondi
+        self.max_bolus_dose = Config.SAFETY_MAX_BOLUS_U
+        self.min_time_between_corrections = Config.SAFETY_MIN_CORRECTION_INTERVAL_S
         self.last_correction_time = 0
 
     def on_connect(self, client, userdata, flags, rc):
@@ -149,7 +147,7 @@ class DataCollectorConsumerSenML:
 
         # IPOGLICEMIA
         if self.patient.is_hypoglycemic(glucose_value):
-            if glucose_value < 50:
+            if glucose_value < Config.GLUCOSE_CRITICAL_LOW:
                 alert_level = "EMERGENCY_LOW"
                 alert_message = f"⚠️ IPOGLICEMIA CRITICA: {glucose_value:.1f} mg/dL - Somministrare glucosio immediatamente!"
                 priority = "emergency"
@@ -159,7 +157,7 @@ class DataCollectorConsumerSenML:
                 priority = "high"
 
             print(f"\n🚨 {alert_message}")
-            self.send_notification(alert_level, alert_message, "critical" if glucose_value < 50 else "high")
+            self.send_notification(alert_level, alert_message, "critical" if glucose_value < Config.GLUCOSE_CRITICAL_LOW else "high")
             action_needed = False
 
         # IPERGLICEMIA
@@ -193,12 +191,11 @@ class DataCollectorConsumerSenML:
                 action_needed = True
 
                 # Aggiorna il messaggio in base al livello di severità
-                if glucose_value > 250 or is_critical_hyper:
+                if glucose_value > Config.GLUCOSE_CRITICAL_HIGH or is_critical_hyper:
                     alert_level = "EMERGENCY_HIGH"
                     alert_message = f"🚨 IPERGLICEMIA CRITICA: {glucose_value:.1f} mg/dL - Somministrazione {insulin_dose:.2f}U insulina"
                     priority = "emergency"
                 else:
-                    # Glicemia > 140 ma <= 200
                     alert_level = "WARNING_HIGH"
                     alert_message = f"⚠️ GLICEMIA ALTA: {glucose_value:.1f} mg/dL - Correzione con {insulin_dose:.2f}U insulina"
                     priority = "high"
@@ -207,7 +204,7 @@ class DataCollectorConsumerSenML:
                 print(f"🎯 Target glicemico: {target_glucose:.1f} mg/dL")
                 print(f"⚡ Priorità comando: {priority}")
 
-                self.send_notification(alert_level, alert_message, "critical" if glucose_value > 250 else "high")
+                self.send_notification(alert_level, alert_message, "critical" if glucose_value > Config.GLUCOSE_CRITICAL_HIGH else "high")
 
             elif insulin_dose_needed > 0 and insulin_dose <= 0:
                 # Caso in cui IOB è sufficiente e non serve altra insulina
@@ -340,7 +337,7 @@ class DataCollectorConsumerSenML:
 
         return json.dumps(senml_record), command_id
 
-    def send_insulin_command_senml(self, insulin_amount, delivery_mode, priority="normal", reason=""):
+    def send_insulin_command_senml(self, insulin_amount, delivery_mode, priority, reason):
         """
         Invia comando alla pompa in formato SenML compatibile
 
