@@ -49,6 +49,7 @@ class GlucoseSimulationLogic:
 
         Returns:
             La variazione negativa di glicemia (mg/dL) da applicare.
+
         """
 
         # Simulazione semplificata:
