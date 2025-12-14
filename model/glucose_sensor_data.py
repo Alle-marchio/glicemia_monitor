@@ -2,7 +2,7 @@ import json
 import time
 import random
 from utils.senml_helper import SenMLHelper
-from conf.mqtt_conf_params import MqttConfigurationParameters as Config
+from conf.SystemConfiguration import SystemConfig as Config
 
 class GlucoseSensorData:
     """Modello completo del sensore di glucosio, con tutta la logica interna di aggiornamento."""

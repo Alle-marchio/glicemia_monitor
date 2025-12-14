@@ -1,5 +1,5 @@
 import random
-
+from conf.SystemConfiguration import SystemConfig as Config
 class GlucoseSimulationLogic:
     """
     Contiene la logica per generare la variazione (incremento/decremento)
@@ -49,11 +49,12 @@ class GlucoseSimulationLogic:
 
         Returns:
             La variazione negativa di glicemia (mg/dL) da applicare.
+
         """
 
         # Simulazione semplificata:
         # Tempo di azione dell'insulina rapida (es. 3 ore)
-        INSULIN_DURATION = 1.0 * 60  # 3 ore in secondi prima era = 3*3600
+        INSULIN_DURATION = Config.INSULIN_ACTION_DURATION_SECONDS
 
         total_effect = 0.0
         new_active_doses = []

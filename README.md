@@ -1,6 +1,12 @@
-# Glicemia Monitor IoT System
+# Sistema IoT per Monitoraggio Glicemia e Gestione Insulina
+[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
+[![MQTT](https://img.shields.io/badge/MQTT-Paho-orange.svg)](https://www.eclipse.org/paho/)
+[![SenML](https://img.shields.io/badge/SenML-RFC%208428-green.svg)](https://tools.ietf.org/html/rfc8428)
+[![Flask](https://img.shields.io/badge/Flask-2.3.3-black.svg)](https://flask.palletsprojects.com/)
 
-Un sistema IoT per il monitoraggio della glicemia e la gestione remota della pompa per insulina dei pazienti diabetici. Il progetto utilizza MQTT come sistema di messaggistica per raccogliere, elaborare e visualizzare i dati sanitari in tempo reale.
+---
+
+Sistema IoT completo per il **monitoraggio continuo della glicemia** in pazienti diabetici e la **gestione automatizzata dell'insulina** tramite pompa intelligente. Il progetto utilizza **MQTT** come protocollo di messaggistica e **SenML** (Sensor Markup Language) come formato standard per lo scambio dati.
 
 ## Funzionalità principali
 
@@ -15,21 +21,34 @@ Un sistema IoT per il monitoraggio della glicemia e la gestione remota della pom
 ## Struttura del progetto
 ```
 glicemia_monitor/
-├── model/ # Classi di modello
-│ ├── glucose_sensor_data.py
-│ ├── insulin_pump_data.py
-│ └── patient_descriptor.py
-├── conf/ # Configurazione
-│ └── mqtt_conf_params.py
-├── process/ # Processi MQTT
-│ ├── glucose_sensor_producer.py
-│ ├── insulin_pump_actuator.py
-│ ├── data_collector_consumer.py
-│ └── notification_manager.py
-├── utils/ # Utilità
-│ └── senml_helper.py
-└── dashboard/ # Interfaccia web
-└── web_dashboard.py
+│
+├── conf/                           # Configurazione
+│   ├── mqtt_conf_params.py        # Parametri MQTT e soglie cliniche
+│   └── patient_config.json        # Profilo paziente (ISF, target, ecc.)
+│
+├── model/                          # Modelli dati
+│   ├── glucose_sensor_data.py     
+│   ├── glucose_simulation_logic.py 
+│   ├── insulin_pump_data.py       
+│   └── patient_descriptor.py      
+│
+├── process/                        # Processi MQTT
+│   ├── glucose_sensor_producer.py
+│   ├── insulin_pump_actuator.py 
+│   ├── data_collector_consumer.py
+│   └── notification_manager.py
+│
+├── utils/                          # Utilità
+│   └── senml_helper.py            
+│
+├── dashboard/                      # Web Dashboard
+│   ├── web_dashboard.py
+│   └── templates/
+│       └── dashboard.html
+│
+├── requirements.txt               
+├── .gitignore
+└── README.md
 ```
 
 ---

@@ -2,6 +2,7 @@ import json
 import time
 import uuid
 from utils.senml_helper import SenMLHelper
+from conf.SystemConfiguration import SystemConfig as Config
 
 class InsulinPumpCommand:
     """Comando per la pompa insulina"""
@@ -25,8 +26,8 @@ class InsulinPumpCommand:
         self.reason = reason  # Motivo del comando
 
         # Parametri di sicurezza
-        self.max_delivery_rate = 25.0  # unità/ora massime
-        self.timeout_minutes = 60  # timeout comando
+        #self.max_delivery_rate = 25.0  # unità/ora massime
+        #self.timeout_minutes = 60  # timeout comando
 
     def is_safe_dose(self, max_bolus=15.0, max_basal=5.0):
         """Verifica se la dose è sicura"""
@@ -82,11 +83,11 @@ class InsulinPumpStatus:
     def update_status(self):
         """Aggiorna lo status della pompa simulando operazioni reali"""
         # Simula consumo insulina basale
-        hourly_consumption = self.current_basal_rate / 720.0  # ogni 5 secondi
+        hourly_consumption = self.current_basal_rate / 720.0
         self.insulin_reservoir_level = max(0.0, self.insulin_reservoir_level - hourly_consumption)
 
         # Simula consumo batteria
-        battery_drain = 0.1  # 0.01% ogni aggiornamento
+        battery_drain = Config.SIM_PUMP_BATTERY_DRAIN_PCT
         self.battery_level = max(0.0, self.battery_level - battery_drain)
 
         # Controlla allarmi

@@ -10,7 +10,7 @@ import threading
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from model.insulin_pump_data import InsulinPumpCommand, InsulinPumpStatus
 from model.patient_descriptor import PatientDescriptor
-from conf.mqtt_conf_params import MqttConfigurationParameters as Config
+from conf.SystemConfiguration import SystemConfig as Config
 from utils.senml_helper import SenMLHelper
 
 
@@ -47,8 +47,8 @@ class InsulinPumpActuatorSenML:
         self.status_interval = Config.PUMP_STATUS_INTERVAL
 
         # Parametri di sicurezza
-        self.max_single_bolus = 15.0  # Unità massime per singolo bolo
-        self.max_basal_rate = 5.0  # Unità/ora massime per basale
+        self.max_single_bolus = Config.SAFETY_MAX_BOLUS_U # Unità massime per singolo bolo
+        self.max_basal_rate = Config.SAFETY_MAX_BASAL_RATE_UH # Unità/ora massime per basale
 
         # Log comandi ricevuti
         self.command_history = []
@@ -530,9 +530,6 @@ class InsulinPumpActuatorSenML:
 
 
 if __name__ == "__main__":
-    import sys
-
-    # Rimuoviamo l'importazione di argparse
 
     # Definisce il percorso di default al file JSON nella cartella conf/
     CONFIG_FILE_PATH = os.path.join(
