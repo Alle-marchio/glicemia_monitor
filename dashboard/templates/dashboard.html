@@ -2,66 +2,458 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Paziente {{ patient_name }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Paziente {{ patient_name }}</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
     <style>
-        body { font-family: sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
-        .container { max-width: 1200px; margin: auto; }
-        h1 { color: #007bff; text-align: center; }
-        .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-top: 20px; }
-        .card { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        .card h2 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; text-align: center; }
-        .metric-item strong { display: block; font-size: 2em; color: #28a745; }
-        .alert-item { padding: 10px; border-radius: 4px; margin-bottom: 10px; font-size: 0.9em; }
-        .severity-critical { background-color: #f8d7da; color: #721c24; border-left: 5px solid #dc3545; }
-        .severity-high { background-color: #fff3cd; color: #856404; border-left: 5px solid #ffc107; }
-        .severity-medium { background-color: #cce5ff; color: #004085; border-left: 5px solid #007bff; }
-        .severity-low { background-color: #d4edda; color: #155724; border-left: 5px solid #28a745; }
-        .status-active { color: green; font-weight: bold; }
-        .status-error, .status-inactive { color: red; font-weight: bold; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #F5FAFB; /* Sfondo chiaro e fresco */
+            color: #333;
+            padding: 25px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 25px 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            border-left: 5px solid #007AA5; /* Colore Primario Forte */
+        }
+
+        header h1 {
+            color: #007AA5;
+            font-size: 1.6em;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        header p {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            border: 1px solid #E8F8F5; /* Bordo soft */
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #E8F8F5; /* Separatore leggero */
+        }
+
+        .card-header h2 {
+            font-size: 1.1em;
+            color: #007AA5; /* Colore Primario per i titoli */
+            font-weight: 600;
+        }
+
+        .card-icon {
+            font-size: 1.3em;
+            color: #007AA5; /* Colore Primario per le icone */
+        }
+
+        /* Card Info Paziente */
+        .patient-info {
+            grid-row: span 2;
+            background: #E8F8F5; /* Sfondo leggero per la card di sidebar */
+        }
+
+        .patient-avatar {
+            width: 80px;
+            height: 80px;
+            background: #007AA5; /* Colore Primario */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2em;
+            color: white;
+            margin: 0 auto 20px;
+            font-weight: 600;
+        }
+
+        .info-row {
+            padding: 12px 0;
+            border-bottom: 1px solid #d9e9e6; /* Separatore più scuro */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #5d6d7e; /* Testo leggibile */
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: #2C3E50;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .threshold-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 600;
+            background: #d9e9e6;
+            color: #007AA5;
+        }
+
+        /* Metriche */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .metric-box {
+            text-align: center;
+            padding: 18px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #E8F8F5;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .metric-label {
+            font-size: 0.8em;
+            color: #7f8c8d;
+            margin-bottom: 8px;
+            display: block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #007AA5; /* Primario per i valori chiave */
+            display: block;
+        }
+
+        .metric-unit {
+            font-size: 0.5em;
+            color: #95a5a6;
+            font-weight: 400;
+        }
+
+        /* Stato */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-active {
+            background: #D4EDDA; /* Colore di Successo */
+            color: #2ECC71;
+        }
+
+        .status-warning {
+            background: #FFF3CD; /* Colore di Warning */
+            color: #F39C12;
+        }
+
+        .status-error {
+            background: #F8D7DA; /* Colore di Errore */
+            color: #E74C3C;
+        }
+
+        /* Chart */
+        .chart-container {
+            grid-column: span 2;
+            position: relative;
+            height: 350px;
+        }
+
+        /* Alert Log */
+        .alert-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .alert-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .alert-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .alert-container::-webkit-scrollbar-thumb {
+            background: #a9cce3; /* Colore scrollbar soft */
+            border-radius: 10px;
+        }
+
+        .alert-item {
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border-left: 4px solid;
+            font-size: 0.85em;
+        }
+
+        .alert-item strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #2C3E50;
+        }
+
+        /* Ridisegno colori Alert con la nuova palette */
+        .severity-critical {
+            background: #fdf5f5;
+            border-left-color: #E74C3C; /* Rosso Vivo */
+            color: #E74C3C;
+        }
+
+        .severity-high {
+            background: #fff8eb;
+            border-left-color: #F39C12; /* Arancione Warning */
+            color: #F39C12;
+        }
+
+        .severity-medium {
+            background: #f0f7ff;
+            border-left-color: #007AA5; /* Primario */
+            color: #007AA5;
+        }
+
+        .severity-low {
+            background: #f0fff4;
+            border-left-color: #2ECC71; /* Verde Successo */
+            color: #2ECC71;
+        }
+
+        .pump-status-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #999;
+            padding: 30px;
+            font-size: 0.95em;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-container {
+                grid-column: span 1;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Sistema di Monitoraggio Glicemia IoT - {{ patient_name }}</h1>
+        <header>
+            <h1>🏥 Sistema di Monitoraggio Glicemia IoT</h1>
+            <p>Dashboard in tempo reale per il monitoraggio continuo della glicemia</p>
+        </header>
 
-        <div class="grid">
-            <div class="main-content">
-    <div class="card">
-        <h2>📈 Glicemia Recente (mg/dL)</h2>
-        <canvas id="glucoseChart"></canvas>
-    </div>
+        <div class="dashboard-grid">
+            <div class="card patient-info">
+                <div class="card-header">
+                    <span class="card-icon">👤</span>
+                    <h2>Profilo Paziente</h2>
+                </div>
 
-    <div class="card" style="margin-top: 20px;">
-        <h2>📟 Stato Sensore Glicemia</h2>
-        <div class="metrics">
-            <div class="metric-item">Dato Letto (mg/dL)<br><strong id="sensor-reading" style="color: #007bff;">N/A</strong></div>
-            <div class="metric-item">Stato Operativo<br><strong id="sensor-status" style="color: #007bff;">N/A</strong></div>
-            <div class="metric-item">Batteria Sensore (%)<br><strong id="sensor-batt-level">N/A</strong></div>
-            <div class="metric-item">Trend Glicemico<br><strong id="glucose-trend" style="color: #007bff;">N/A</strong></div>
-            <div class="metric-item">Tasso di Variazione<br><strong id="trend-rate" style="color: #007bff;">N/A</strong> mg/dL/min</div>
-            <div class="metric-item">Dati Letti<br><strong id="history-count">0</strong></div>
-        </div>
-    </div>
-    <div class="card" style="margin-top: 20px;">
-        <h2>⚙️ Stato Pompa</h2>
-        <div class="metrics">
-            <div class="metric-item">Livello Insulina (U)<br><strong id="res-level">N/A</strong></div>
-            <div class="metric-item">Batteria Pompa (%)<br><strong id="batt-level">N/A</strong></div>
-            <div class="metric-item">Stato Operativo<br><strong id="pump-status" class="status-active">N/A</strong></div>
-        </div>
-        <p style="margin-top: 20px;">Allarmi Attivi: <strong id="alarms-count">0</strong></p>
-    </div>
-</div>
+                <div class="patient-avatar">{{ patient_name[0] if patient_name else 'P' }}</div>
 
-            <div class="sidebar">
-                <div class="card">
-                    <h2>🚨 Log Notifiche</h2>
-                    <div id="alert-list">
-                        <div class="alert-item severity-low">In attesa di dati...</div>
+                <div class="info-row">
+                    <span class="info-label">Nome</span>
+                    <span class="info-value">{{ patient_name }}</span>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">ID Paziente</span>
+                    <span class="info-value" id="patient-id">N/A</span>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">Età</span>
+                    <span class="info-value" id="patient-age">N/A</span>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">Peso</span>
+                    <span class="info-value" id="patient-weight">N/A</span>
+                </div>
+
+                <div style="margin-top: 25px; padding-top: 20px; border-top: 2px solid #d9e9e6;">
+                    <h3 style="font-size: 0.95em; color: #007AA5; margin-bottom: 15px; font-weight: 600;">Range Glicemico Target</h3>
+
+                    <div class="info-row">
+                        <span class="info-label">Range Normale</span>
+                        <span class="info-value">
+                            <span class="threshold-badge" id="target-range">N/A</span>
+                        </span>
                     </div>
+
+                    <div class="info-row">
+                        <span class="info-label">Soglia Ipoglicemia</span>
+                        <span class="info-value" style="color: #E74C3C;" id="hypo-threshold">N/A</span>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="info-label">Soglia Iperglicemia</span>
+                        <span class="info-value" style="color: #F39C12;" id="hyper-threshold">N/A</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="main-grid">
+                <div class="card chart-container">
+                    <div class="card-header">
+                        <span class="card-icon">📈</span>
+                        <h2>Andamento Glicemia</h2>
+                    </div>
+                    <canvas id="glucoseChart"></canvas>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">🔬</span>
+                        <h2>Sensore Glicemia</h2>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric-box">
+                            <span class="metric-label">Valore Attuale</span>
+                            <span class="metric-value" id="sensor-reading">
+                                --<span class="metric-unit">mg/dL</span>
+                            </span>
+                        </div>
+
+                        <div class="metric-box">
+                            <span class="metric-label">Trend</span>
+                            <span class="metric-value" style="font-size: 1.5em;" id="glucose-trend">--</span>
+                        </div>
+
+                        <div class="metric-box">
+                            <span class="metric-label">Variazione</span>
+                            <span class="metric-value" style="font-size: 1.3em;" id="trend-rate">
+                                --<span class="metric-unit">mg/dL/min</span>
+                            </span>
+                        </div>
+
+                        <div class="metric-box">
+                            <span class="metric-label">Batteria Sensore</span>
+                            <span class="metric-value" style="font-size: 1.5em;" id="sensor-batt-level">
+                                --<span class="metric-unit">%</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #f0f0f0; text-align: center;">
+                        <span style="color: #666; font-size: 0.9em;">Stato: </span>
+                        <span class="status-badge status-active" id="sensor-status">In attesa...</span>
+                        <span style="color: #999; margin-left: 15px; font-size: 0.9em;">
+                            Letture: <strong id="history-count">0</strong>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">⚙️</span>
+                        <h2>Pompa Insulina</h2>
+                    </div>
+
+                    <div class="pump-status-grid">
+                        <div class="metric-box">
+                            <span class="metric-label">Serbatoio</span>
+                            <span class="metric-value" style="font-size: 1.8em;" id="res-level">
+                                --<span class="metric-unit">U</span>
+                            </span>
+                        </div>
+
+                        <div class="metric-box">
+                            <span class="metric-label">Batteria</span>
+                            <span class="metric-value" style="font-size: 1.8em;" id="batt-level">
+                                --<span class="metric-unit">%</span>
+                            </span>
+                        </div>
+
+                        <div class="metric-box">
+                            <span class="metric-label">Allarmi</span>
+                            <span class="metric-value" style="font-size: 1.8em; color: #E74C3C;" id="alarms-count">0</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #f0f0f0; text-align: center;">
+                        <span style="color: #666; font-size: 0.9em;">Stato Operativo: </span>
+                        <span class="status-badge status-active" id="pump-status">In attesa...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="grid-column: 1 / 3; margin-top: 0; padding-top: 0;">
+                <div class="card-header" style="margin-top: 25px;">
+                    <span class="card-icon">🚨</span>
+                    <h2>Notifiche e Alert</h2>
+                </div>
+                <div class="alert-container" id="alert-list">
+                    <div class="empty-state">In attesa di notifiche...</div>
                 </div>
             </div>
         </div>
@@ -77,63 +469,102 @@
                 datasets: [{
                     label: 'Glicemia (mg/dL)',
                     data: [],
-                    borderColor: 'rgb(75, 192, 192)',
-                    tension: 0.1,
-                    fill: false
+                    borderColor: '#007AA5', /* Colore Primario per la linea del grafico */
+                    backgroundColor: 'rgba(0, 122, 165, 0.1)', /* Colore Primario sfumato */
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 3,
+                    pointHoverRadius: 5,
+                    borderWidth: 2
                 }]
             },
             options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
                 scales: {
                     y: {
                         beginAtZero: false,
-                        title: { display: true, text: 'Glicemia (mg/dL)' }
+                        title: {
+                            display: true,
+                            text: 'mg/dL',
+                            font: { weight: 'bold' }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
                     },
                     x: {
-                        title: { display: true, text: 'Ora' }
+                        title: {
+                            display: true,
+                            text: 'Ora',
+                            font: { weight: 'bold' }
+                        },
+                        grid: {
+                            display: false
+                        }
                     }
                 }
             }
         });
 
-function updateDashboard() {
+        function updateDashboard() {
             $.getJSON('/data', function(data) {
-                // 1. Aggiorna i dati correnti (Card)
                 const current = data.current;
 
-                // --- Aggiornamento Dati Sensore ---
-                $('#sensor-reading').text(current.glucose_value || 'N/A');
-                $('#sensor-status').text(current.glucose_status || 'N/A');
-                $('#sensor-batt-level').text(current.sensor_battery || 'N/A');
-                $('#glucose-trend').text(current.glucose_trend || 'N/A');
-                $('#trend-rate').text(current.trend_rate !== undefined ? current.trend_rate.toFixed(1) : 'N/A');
+                // Aggiorna dati sensore
+                $('#sensor-reading').html(current.glucose_value || '--' + '<span class="metric-unit">mg/dL</span>');
 
-                // --- Aggiornamento Dati Pompa ---
-                $('#res-level').text(current.insulin_reservoir || 'N/A');
-                $('#batt-level').text(current.battery_level || 'N/A');
-                $('#pump-status').text(current.pump_status || 'N/A');
+                const status = current.glucose_status || 'N/A';
+                const statusBadge = $('#sensor-status');
+                statusBadge.text(status);
+                statusBadge.removeClass('status-active status-warning status-error');
+                // Logica di stato basata sul valore
+                statusBadge.addClass(status.toLowerCase() === 'active' ? 'status-active' : 'status-warning');
+
+                $('#sensor-batt-level').html((current.sensor_battery || '--') + '<span class="metric-unit">%</span>');
+                $('#glucose-trend').text(current.glucose_trend || '--');
+                $('#trend-rate').html((current.trend_rate !== undefined ? current.trend_rate.toFixed(1) : '--') + '<span class="metric-unit">mg/dL/min</span>');
+
+                // Aggiorna dati pompa
+                $('#res-level').html((current.insulin_reservoir || '--') + '<span class="metric-unit">U</span>');
+                $('#batt-level').html((current.battery_level || '--') + '<span class="metric-unit">%</span>');
+
+                const pumpStatus = current.pump_status || 'N/A';
+                const pumpBadge = $('#pump-status');
+                pumpBadge.text(pumpStatus);
+                pumpBadge.removeClass('status-active status-warning status-error');
+                // Logica di stato basata sul valore
+                pumpBadge.addClass(pumpStatus.toLowerCase() === 'active' ? 'status-active' : 'status-error');
+
                 $('#alarms-count').text(current.alarms_count || '0');
+                $('#alarms-count').css('color', current.alarms_count > 0 ? '#E74C3C' : '#007AA5');
 
-                // 2. Aggiorna il Grafico e il conteggio
+                // Aggiorna grafico
                 const history = data.history;
                 glucoseChart.data.labels = history.map(item => item.time);
                 glucoseChart.data.datasets[0].data = history.map(item => item.value);
                 glucoseChart.update();
 
-                $('#history-count').text(history.length); // Aggiorna il conteggio dei dati letti
+                $('#history-count').text(history.length);
 
-                // 3. Aggiorna il Log Alert
+                // Aggiorna alert
                 const alertList = $('#alert-list');
                 alertList.empty();
 
                 if (data.alerts.length === 0) {
-                    alertList.append('<div class="alert-item severity-low">Nessun allarme attivo.</div>');
+                    alertList.append('<div class="empty-state">Nessun allarme attivo</div>');
                 } else {
                     data.alerts.forEach(alert => {
-                        const severityClass = 'severity-' + alert.severity;
+                        const severityClass = 'severity-' + alert.severity.toLowerCase();
                         const alertHtml = `
                             <div class="alert-item ${severityClass}">
-                                <strong>[${alert.time}] ${alert.type} (${alert.severity.toUpperCase()})</strong><br>
-                                ${alert.message}
+                                <strong>[${alert.time}] ${alert.type}</strong>
+                                <div>${alert.message}</div>
                             </div>
                         `;
                         alertList.append(alertHtml);
@@ -142,8 +573,25 @@ function updateDashboard() {
             });
         }
 
-        // Esegue il primo aggiornamento e imposta il polling (ogni 1 secondo)
+        // Carica configurazione paziente (chiamata una sola volta all'inizio)
+        function loadPatientConfig() {
+            // Assumo che l'endpoint sia disponibile. Se usi solo Flask per passare i dati diretti,
+            // questa funzione dovrà essere modificata.
+            $.getJSON('/patient_config', function(config) {
+                $('#patient-id').text(config.patient_id || 'N/A');
+                $('#patient-age').text((config.age || 'N/A') + ' anni');
+                $('#patient-weight').text((config.weight || 'N/A') + ' kg');
+                $('#target-range').text(`${config.target_glucose_min} - ${config.target_glucose_max} mg/dL`);
+                $('#hypo-threshold').text(`< ${config.hypoglycemia_threshold} mg/dL`);
+                $('#hyper-threshold').text(`> ${config.hyperglycemia_threshold} mg/dL`);
+            }).fail(function() {
+                console.log('Configurazione paziente non disponibile via API, usa dati pre-renderizzati se possibile.');
+            });
+        }
+
+        // Avvio
         $(document).ready(function() {
+            loadPatientConfig();
             updateDashboard();
             setInterval(updateDashboard, 1000);
         });

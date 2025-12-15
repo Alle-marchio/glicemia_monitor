@@ -153,6 +153,20 @@ def get_data():
         }
     return jsonify(response_data)
 
+@app.route('/patient_config')
+def get_patient_config():
+    """Endpoint per fornire la configurazione del paziente."""
+    try:
+        CONFIG_FILE_PATH = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            'conf',
+            'patient_config.json'
+        )
+        with open(CONFIG_FILE_PATH, 'r') as f:
+            config = json.load(f)
+        return jsonify(config)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # --- AVVIO ---
 
