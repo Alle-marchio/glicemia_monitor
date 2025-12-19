@@ -30,12 +30,13 @@ alert_log = []  # Cronologia degli alert
 
 # --- CONFIGURAZIONE E INIZIALIZZAZIONE ---
 app = Flask(__name__)
-PATIENT_NAME = "patient_001"  # Sarà caricato dal JSON
+PATIENT_ID = "patient_001"  # Sarà caricato dal JSON
+PATIENT_NAME = "Paziente"
 
 
 def load_patient_config():
     """Carica la configurazione del paziente dal file JSON."""
-    global PATIENT_NAME
+    global PATIENT_ID, PATIENT_NAME
     CONFIG_FILE_PATH = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         'conf',
@@ -43,7 +44,8 @@ def load_patient_config():
     )
     try:
         patient = PatientDescriptor.from_json_file(CONFIG_FILE_PATH)
-        PATIENT_NAME = patient.name
+        PATIENT_ID = patient.patient_id
+        PATIENT_NAME = patient.name  # Carica il nome del paziente
         return patient
     except Exception as e:
         print(f"❌ Errore di caricamento configurazione paziente: {e}")
@@ -55,14 +57,14 @@ def load_patient_config():
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
         print("✅ Dashboard MQTT client connesso.")
-        base_topic = f"/iot/patient/{PATIENT_NAME}"
+        base_topic = f"/iot/patient/{PATIENT_ID}"
         topics = [
             (f"{base_topic}/glucose/sensor/data", Config.QOS_SENSOR_DATA),
             (f"{base_topic}/insulin/pump/status", Config.QOS_SENSOR_DATA),
             (f"{base_topic}/notifications/alert", Config.QOS_NOTIFICATIONS)
         ]
         client.subscribe(topics)
-        print(f"📥 Subscribed a 3 topic chiave per il paziente {PATIENT_NAME}.")
+        print(f"📥 Subscribed a 3 topic chiave per il paziente {PATIENT_NAME} (ID: {PATIENT_ID}).")
     else:
         print(f"❌ Dashboard MQTT client connessione fallita: {rc}")
 
@@ -121,7 +123,7 @@ def on_message(client, userdata, msg):
 
 def mqtt_client_loop():
     """Funzione di loop MQTT da eseguire in un thread separato."""
-    client = mqtt.Client(f"web_dashboard_client_{PATIENT_NAME}")
+    client = mqtt.Client(f"web_dashboard_client_{PATIENT_ID}")
     client.on_connect = on_connect
     client.on_message = on_message
 
@@ -137,7 +139,7 @@ def mqtt_client_loop():
 @app.route('/')
 def index():
     """Punto di ingresso della dashboard, mostra il template HTML."""
-    return render_template('dashboard.html', patient_id=PATIENT_NAME)
+    return render_template('dashboard.html', patient_name=PATIENT_NAME)
 
 
 @app.route('/data')
@@ -151,6 +153,20 @@ def get_data():
         }
     return jsonify(response_data)
 
+@app.route('/patient_config')
+def get_patient_config():
+    """Endpoint per fornire la configurazione del paziente."""
+    try:
+        CONFIG_FILE_PATH = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            'conf',
+            'patient_config.json'
+        )
+        with open(CONFIG_FILE_PATH, 'r') as f:
+            config = json.load(f)
+        return jsonify(config)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # --- AVVIO ---
 
@@ -160,7 +176,7 @@ if __name__ == '__main__':
     if patient_config is None:
         sys.exit(1)
 
-    print(f"🌐 Avvio Dashboard Web per Paziente {PATIENT_NAME}")
+    print(f"🌐 Avvio Dashboard Web per Paziente: {PATIENT_NAME} (ID: {PATIENT_ID})")
 
     # 2. Avvia il thread MQTT
     mqtt_thread = threading.Thread(target=mqtt_client_loop)
