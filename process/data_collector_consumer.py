@@ -65,6 +65,8 @@ class DataCollectorConsumerSenML:
             client.subscribe(self.glucose_data_topic, qos=Config.QOS_SENSOR_DATA)
             client.subscribe(self.pump_status_topic, qos=Config.QOS_SENSOR_DATA)
 
+            self.publish_patient_info()
+
             print("🎯 Data Collector pronto per ricevere dati SenML...")
         else:
             print(f"❌ Connessione fallita con codice: {rc}")
@@ -478,6 +480,34 @@ class DataCollectorConsumerSenML:
             'last_pump_status': self.last_pump_status
         }
 
+    def publish_patient_info(self):
+        """
+        Pubblica le informazioni statiche del paziente sul topic /info
+        utilizzando il flag retain=True.
+        """
+        try:
+            # Recupera il topic dalla configurazione
+            # Assicurati che in SystemConfig sia definito come: PATIENT_INFO_TOPIC = "info"
+            info_topic = f"{self.base_topic}/{Config.PATIENT_INFO_TOPIC}"
+
+            # Genera il messaggio SenML usando il metodo già presente nel modello PatientDescriptor
+            patient_senml = self.patient.to_senml()
+
+            # Pubblica con retain=True come richiesto dalle specifiche
+            result = self.client.publish(
+                info_topic,
+                patient_senml,
+                qos=Config.QOS_NOTIFICATIONS,
+                retain=True
+            )
+
+            if result.rc == mqtt.MQTT_ERR_SUCCESS:
+                print(f"ℹ️ Info paziente pubblicate con successo su: {info_topic}")
+            else:
+                print(f"⚠️ Errore pubblicazione info paziente: {result.rc}")
+
+        except Exception as e:
+            print(f"❌ Errore durante la pubblicazione delle info paziente: {e}")
 
 # MAIN - Esempio di utilizzo
 if __name__ == "__main__":
