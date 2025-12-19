@@ -63,6 +63,7 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             border: 1px solid #E8F8F5; /* Bordo soft */
             transition: all 0.3s ease;
+            overflow: hidden;
         }
 
         .card:hover {
@@ -208,10 +209,19 @@
         }
 
         /* Chart */
-        .chart-container {
+        .chart-card {
             grid-column: span 2;
+        }
+
+        .chart-wrapper {
             position: relative;
-            height: 350px;
+            height: 280px;   /* altezza reale del grafico */
+            width: 100%;
+        }
+
+        .chart-wrapper canvas {
+        width: 100% !important;
+        height: 100% !important;
         }
 
         /* Alert Log */
@@ -362,13 +372,15 @@
             </div>
 
             <div class="main-grid">
-                <div class="card chart-container">
+                <div class="card chart-card">
                     <div class="card-header">
                         <span class="card-icon">📈</span>
                         <h2>Andamento Glicemia</h2>
                     </div>
-                    <canvas id="glucoseChart"></canvas>
-                </div>
+                    <div class="chart-wrapper">
+                        <canvas id="glucoseChart"></canvas>
+                    </div>
+            </div>
 
                 <div class="card">
                     <div class="card-header">
