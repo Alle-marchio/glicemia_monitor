@@ -5,6 +5,7 @@ import sys
 import os
 import json
 import time
+## se vuoi simulare iperglicemia basta modificare initial_glucose in glucose_sensor_producer.py ##
 
 # Import dei modelli e helper
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
