@@ -64,6 +64,10 @@ class GlucoseSensorProducerSenML:
             print("=" * 60)
 
             client.subscribe(self.command_topic, qos=Config.QOS_COMMANDS)
+            self.control_topic = f"{self.base_topic}/glucose/sensor/set_mode"
+            client.subscribe(self.control_topic)
+            print(f"📥 Ascolto cambio modalità su: {self.control_topic}")
+
         else:
             print(f"❌ Connessione fallita: rc={rc}")
 
@@ -76,6 +80,9 @@ class GlucoseSensorProducerSenML:
         try:
             topic = msg.topic
             payload = msg.payload.decode()
+
+            if msg.topic == getattr(self, 'control_topic', ''):
+                self.change_simulation_mode(payload)
 
             if "insulin/pump/command" in topic:
                 # Parse del comando SenML per estrarre la dose

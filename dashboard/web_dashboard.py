@@ -169,6 +169,23 @@ def get_patient_config():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+@app.route('/simulate/<mode>')
+def simulate_condition(mode):
+    """Invia un comando MQTT al sensore per cambiare modalità di simulazione."""
+    valid_modes = ["normal", "hypoglycemia", "hyperglycemia", "fluctuating"]
+    if mode in valid_modes:
+        command_topic = f"/iot/patient/{PATIENT_ID}/glucose/sensor/set_mode"
+
+        # Usiamo il client MQTT globale o ne creiamo uno temporaneo per l'invio
+        temp_client = mqtt.Client(f"web_cmd_{PATIENT_ID}")
+        temp_client.connect(Config.BROKER_ADDRESS, Config.BROKER_PORT)
+        temp_client.publish(command_topic, mode)
+        temp_client.disconnect()
+
+        return jsonify({"status": "success", "mode": mode})
+    return jsonify({"status": "error", "message": "Invalid mode"}), 400
+
 # --- AVVIO ---
 
 if __name__ == '__main__':

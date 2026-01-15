@@ -412,8 +412,8 @@
                 </div>
 
                 <div class="patient-actions">
-                    <button class="btn-primary" onclick="alert('simula ipoglicemia...')">Simula ipoglicemia</button>
-                    <button class="btn-secondary" onclick="alert('simula iperglicemia...')">Simula iperglicemia</button>
+                    <button class="btn-primary" onclick="simulateHypo()">Simula ipoglicemia</button>
+                    <button class="btn-secondary" onclick="simulateHyper()">Simula iperglicemia</button>
                     <button class="btn-tertiary" onclick="downloadGlucoseData()">scarica dati</button>
                 </div>
             </div>
@@ -601,6 +601,19 @@
                 }
             });
         }
+
+        function simulateHypo() {
+            $.get('/simulate/hypoglycemia', function(data) {
+                console.log("Modalità ipoglicemia attivata");
+            });
+        }
+
+        function simulateHyper() {
+            $.get('/simulate/hyperglycemia', function(data) {
+                console.log("Modalità iperglicemia attivata");
+            });
+        }
+
 
         function downloadGlucoseData() {
             // Recuperiamo i dati storici salvati nel grafico
