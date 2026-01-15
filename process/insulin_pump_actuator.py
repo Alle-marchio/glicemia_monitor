@@ -196,7 +196,11 @@ class InsulinPumpActuatorSenML:
                                           f"Dose {insulin_amount:.2f}U supera limite sicurezza",
                                           "critical")
                     return False
-
+            self.send_senml_alert(
+                alert_type="PUMP_ACK",
+                message=f"Confermato: Ricevuto comando {command_id}. Inizio erogazione di {insulin_amount:.2f}U ({delivery_mode})",
+                severity="low"
+            )
             # ESEGUI IL COMANDO
             success = self.execute_delivery(delivery_mode, insulin_amount)
 

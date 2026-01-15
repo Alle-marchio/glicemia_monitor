@@ -5,6 +5,7 @@ import sys
 import os
 import json
 import time
+## se vuoi simulare iperglicemia basta modificare initial_glucose in glucose_sensor_producer.py ##
 
 # Import dei modelli e helper
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -167,6 +168,23 @@ def get_patient_config():
         return jsonify(config)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route('/simulate/<mode>')
+def simulate_condition(mode):
+    """Invia un comando MQTT al sensore per cambiare modalità di simulazione."""
+    valid_modes = ["normal", "hypoglycemia", "hyperglycemia", "fluctuating"]
+    if mode in valid_modes:
+        command_topic = f"/iot/patient/{PATIENT_ID}/glucose/sensor/set_mode"
+
+        # Usiamo il client MQTT globale o ne creiamo uno temporaneo per l'invio
+        temp_client = mqtt.Client(f"web_cmd_{PATIENT_ID}")
+        temp_client.connect(Config.BROKER_ADDRESS, Config.BROKER_PORT)
+        temp_client.publish(command_topic, mode)
+        temp_client.disconnect()
+
+        return jsonify({"status": "success", "mode": mode})
+    return jsonify({"status": "error", "message": "Invalid mode"}), 400
 
 # --- AVVIO ---
 
