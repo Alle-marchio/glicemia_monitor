@@ -51,7 +51,7 @@ class DataCollectorConsumerSenML:
         # Safety limits
         self.max_bolus_dose = Config.SAFETY_MAX_BOLUS_U
         self.min_time_between_corrections = Config.SAFETY_MIN_CORRECTION_INTERVAL_S
-        self.last_correction_time = 0
+        self.last_correction_time = time.time() - Config.SAFETY_MIN_CORRECTION_INTERVAL_S
 
     def on_connect(self, client, userdata, flags, rc):
         """Callback quando il client si connette al broker"""
