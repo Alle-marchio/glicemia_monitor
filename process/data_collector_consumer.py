@@ -209,10 +209,11 @@ class DataCollectorConsumerSenML:
                 self.send_notification(alert_level, alert_message, "critical" if glucose_value > Config.GLUCOSE_CRITICAL_HIGH else "high")
 
             elif insulin_dose_needed > 0 and insulin_dose <= 0:
-                # Caso in cui IOB è sufficiente e non serve altra insulina
-                print(f"✅ IOB sufficiente ({iob:.2f}U) - Nessuna correzione necessaria al momento.")
-                self.send_notification("INFO", "✅ Iperglicemia rilevata ma IOB sufficiente. Monitoraggio in corso.",
-                                       "low")
+
+                iob = self.calculate_iob(time.time())
+                msg = f"Iperglicemia rilevata ({glucose_value} mg/dL) ma IOB sufficiente ({iob:.2f}U). Nessun bolo extra."
+                print(f"✅ {msg}")
+                self.send_notification("INFO", msg, "low")
 
             elif insulin_dose > 0:
                 # Caso in cui serve insulina ma il tempo minimo tra le correzioni non è trascorso
