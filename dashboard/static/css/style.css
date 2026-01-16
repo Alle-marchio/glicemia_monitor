@@ -169,7 +169,7 @@
 
         .btn-secondary {
             background-color: transparent;
-            border: 2px solid #007AA5;
+            border: 1.5px solid #007AA5;
             color: #007AA5;
         }
 
@@ -181,7 +181,7 @@
         .btn-tertiary{
             background-color: #ff9600;
             color: #000000;
-            border: 2px solid #000000;
+            border: 1.5px solid #000000;
         }
 
         .btn-tertiary:hover {
