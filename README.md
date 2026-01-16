@@ -45,6 +45,8 @@ glicemia_monitor/
 │   ├── web_dashboard.py
 │   └── templates/
 │       └── dashboard.html
+|   └── static/
+│       └── styles.css
 │
 ├── requirements.txt               
 ├── .gitignore
