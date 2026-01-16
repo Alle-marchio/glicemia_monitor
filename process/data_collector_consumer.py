@@ -51,7 +51,8 @@ class DataCollectorConsumerSenML:
         # Safety limits
         self.max_bolus_dose = Config.SAFETY_MAX_BOLUS_U
         self.min_time_between_corrections = Config.SAFETY_MIN_CORRECTION_INTERVAL_S
-        self.last_correction_time = 0
+        self.last_correction_time = time.time() - Config.SAFETY_MIN_CORRECTION_INTERVAL_S
+        self.waiting_notification_sent = False
 
     def on_connect(self, client, userdata, flags, rc):
         """Callback quando il client si connette al broker"""
@@ -219,8 +220,10 @@ class DataCollectorConsumerSenML:
                 # Caso in cui serve insulina ma il tempo minimo tra le correzioni non è trascorso
                 remaining = self.min_time_between_corrections - time_since_last_correction
                 print(f"⏳ Attesa tra correzioni: {remaining:.0f}s rimanenti")
-                self.send_notification("INFO", "⏳ Iperglicemia rilevata ma in attesa prima di nuova correzione", "low")
-
+                if not self.waiting_notification_sent:
+                    self.send_notification("INFO", "⏳ Iperglicemia rilevata: in attesa della correzione precedente",
+                                           "low")
+                    self.waiting_notification_sent = True
         # VALORI NORMALI
         else:
             print(
@@ -236,6 +239,7 @@ class DataCollectorConsumerSenML:
                 reason=reason
             )
             self.last_correction_time = time.time()
+            self.waiting_notification_sent = False;
 
         print("=" * 60 + "\n")
 

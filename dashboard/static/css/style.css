@@ -1,0 +1,348 @@
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #F5FAFB;
+            color: #333;
+            padding: 25px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 25px 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            border:1px solid #b1bcbb;
+            border-left: 5px solid #007AA5;
+
+        }
+
+        header h1 {
+            color: #007AA5;
+            font-size: 1.6em;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        header p {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            border: 1px solid #b1bcbb;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #E8F8F5;
+        }
+
+        .card-header h2 {
+            font-size: 1.1em;
+            color: #007AA5;
+            font-weight: 600;
+        }
+
+        .card-icon {
+            font-size: 1.3em;
+            color: #007AA5;
+        }
+
+        /* Card Info Paziente */
+        .patient-info {
+            align-self: start;
+            background: #E8F8F5;
+        }
+
+        .patient-avatar {
+            width: 80px;
+            height: 80px;
+            background: #007AA5;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2em;
+            color: white;
+            margin: 0 auto 20px;
+            font-weight: 600;
+        }
+
+        .info-row {
+            padding: 12px 0;
+            border-bottom: 1px solid #d9e9e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #5d6d7e;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: #2C3E50;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .threshold-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 600;
+            background: #d9e9e6;
+            color: #007AA5;
+        }
+
+        /* Stili per i nuovi Bottoni */
+        .patient-actions {
+            margin-top: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn-primary, .btn-secondary,.btn-tertiary {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            font-size: 0.9em;
+        }
+
+        .btn-primary {
+            background-color: #007AA5;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #005f82;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            border: 1.5px solid #007AA5;
+            color: #007AA5;
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(0, 122, 165, 0.05);
+            transform: translateY(-1px);
+        }
+
+        .btn-tertiary{
+            background-color: #ff9600;
+            color: #000000;
+            border: 1.5px solid #000000;
+        }
+
+        .btn-tertiary:hover {
+            background-color:#DC6D00;
+            transform: translateY(-1px);
+        }
+
+        /* Metriche */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .metric-box {
+            text-align: center;
+            padding: 18px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #E8F8F5;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .metric-label {
+            font-size: 0.8em;
+            color: #7f8c8d;
+            margin-bottom: 8px;
+            display: block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #007AA5;
+            display: block;
+        }
+
+        .metric-unit {
+            font-size: 0.5em;
+            color: #95a5a6;
+            font-weight: 400;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-active {
+            background: #D4EDDA;
+            color: #155724;
+        }
+
+        .status-warning {
+            background: #FFF3CD;
+            color: #856404;
+        }
+
+        .status-error {
+            background: #F8D7DA;
+            color: #721C24;
+        }
+
+        .chart-card {
+            grid-column: span 2;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 280px;
+            width: 100%;
+        }
+
+        .chart-wrapper canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .alert-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .alert-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .alert-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .alert-container::-webkit-scrollbar-thumb {
+            background: #a9cce3;
+            border-radius: 10px;
+        }
+
+        .alert-item {
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border-left: 4px solid;
+            font-size: 0.85em;
+        }
+
+        .alert-item strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #2C3E50;
+        }
+
+        .severity-critical {
+            background: #fdf5f5;
+            border-left-color: #E74C3C;
+            color: #E74C3C;
+        }
+
+        .severity-high {
+            background: #fff8eb;
+            border-left-color: #F39C12;
+            color: #F39C12;
+        }
+
+        .severity-medium {
+            background: #f0f7ff;
+            border-left-color: #007AA5;
+            color: #007AA5;
+        }
+
+        .severity-low {
+            background: #f0fff4;
+            border-left-color: #2ECC71;
+            color: #2ECC71;
+        }
+
+        .pump-status-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #999;
+            padding: 30px;
+            font-size: 0.95em;
+        }
+
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
