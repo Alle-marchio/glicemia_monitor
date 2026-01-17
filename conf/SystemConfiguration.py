@@ -119,3 +119,16 @@ class SystemConfig(object):
     # Configurazioni Dashboard
     DASHBOARD_HISTORY_LIMIT = 30  # Numero massimo di letture da mostrare nel grafico
     DASHBOARD_ALERT_LIMIT = 10  # Numero massimo di alert da mostrare nel log
+
+    # ---------------------------------------------------------------------
+    # Parametri Tecnici MQTT
+    # ---------------------------------------------------------------------
+    MQTT_KEEPALIVE_S = 60
+    MQTT_TIMEOUT_S = 60
+
+    # ---------------------------------------------------------------------
+    # Parametri Simulazione (Processi)
+    # ---------------------------------------------------------------------
+    SIM_PUMP_DELIVERY_SEC_PER_UNIT = 1.0 # Tempo simulato per erogare 1 unità di insulina (secondi)
+    SIM_PUMP_DELIVERY_MAX_WAIT_S = 3.0 # Tempo massimo di attesa simulata per non bloccare il thread (secondi)
+    SIM_SENSOR_START_VALUE = 120.0 # Start default sensore glicemia
