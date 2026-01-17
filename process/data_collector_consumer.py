@@ -5,12 +5,10 @@ import sys
 import os
 import uuid
 
-# Import dei modelli e helper
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from model.patient_descriptor import PatientDescriptor
 from conf.SystemConfiguration import SystemConfig as Config
 from utils.senml_helper import SenMLHelper
-
 
 class DataCollectorConsumerSenML:
     """
@@ -55,7 +53,6 @@ class DataCollectorConsumerSenML:
         self.waiting_notification_sent = False
 
     def on_connect(self, client, userdata, flags, rc):
-        """Callback quando il client si connette al broker"""
         if rc == 0:
             print(f"✅ Data Collector (SenML) connesso al broker MQTT")
             print(f"📡 Subscribing a topic glicemia: {self.glucose_data_topic}")
@@ -73,12 +70,9 @@ class DataCollectorConsumerSenML:
             print(f"❌ Connessione fallita con codice: {rc}")
 
     def on_message(self, client, userdata, msg):
-        """Callback quando arriva un messaggio MQTT in formato SenML"""
         try:
             topic = msg.topic
             payload = msg.payload.decode()
-
-            # ✅ Parse del payload in formato SenML
             parsed = SenMLHelper.parse_senml(payload)
             measurements = parsed.get("measurements", {})
 
@@ -93,16 +87,11 @@ class DataCollectorConsumerSenML:
         except Exception as e:
             print(f"❌ Errore nell'elaborazione del messaggio SenML: {e}")
 
-        # ---------------------------------------------------------------------
-        # LOGICA IOB (Insulin-on-Board)
-        # ---------------------------------------------------------------------
     def calculate_iob(self, current_time):
             """
             Calcola l'Insulin-on-Board (IOB) tracciando i comandi inviati.
-
             Si assume una degradazione lineare dell'insulina nell'arco di INSULIN_DURATION_SECONDS.
             """
-
             iob_units = 0.0
             new_commands_sent = []
 
@@ -113,17 +102,12 @@ class DataCollectorConsumerSenML:
                     # IOB rimanente proporzionale al tempo rimanente
                     time_remaining = self.INSULIN_DURATION_SECONDS - elapsed
                     iob_ratio = time_remaining / self.INSULIN_DURATION_SECONDS
-
                     iob_units += command['amount'] * iob_ratio
                     new_commands_sent.append(command)
-
-            # Mantieni solo i comandi ancora attivi per la prossima iterazione
-            self.insulin_commands_sent[:] = new_commands_sent
-
+            self.insulin_commands_sent[:] = new_commands_sent # Mantieni solo i comandi ancora attivi per la prossima iterazione
             return iob_units
 
     def process_glucose_data(self, data, timestamp):
-        """Elabora i dati SenML del sensore glicemia"""
         print("\n" + "=" * 60)
         print("📊 NUOVO DATO GLICEMIA RICEVUTO (SenML)")
         print("=" * 60)
@@ -141,7 +125,6 @@ class DataCollectorConsumerSenML:
 
         self.last_glucose_reading = data
 
-        # ANALISI E DECISIONE
         action_needed = False
         insulin_dose = 0.0
         alert_level = "NORMAL"
@@ -158,39 +141,28 @@ class DataCollectorConsumerSenML:
                 alert_level = "WARNING_LOW"
                 alert_message = f"⚠️ IPOGLICEMIA: {glucose_value:.1f} mg/dL - Assumere 15g di carboidrati"
                 priority = "high"
-
             print(f"\n🚨 {alert_message}")
             self.send_notification(alert_level, alert_message, "critical" if glucose_value < Config.GLUCOSE_CRITICAL_LOW else "high")
             action_needed = False
 
         # IPERGLICEMIA
         elif glucose_value > self.patient.target_glucose_max:
-
             target_glucose = (self.patient.target_glucose_min + self.patient.target_glucose_max) / 2
-
-            # Calcola la dose totale NECESSARIA (senza considerare l'insulina attiva)
             insulin_dose_needed = self.patient.calculate_insulin_dose(glucose_value, target_glucose)
-
-            # Calcola l'Insulin-on-Board (IOB)
             iob = self.calculate_iob(time.time())
 
-            # Calcola la dose finale: Dose necessaria - IOB
             insulin_dose = max(0.0, insulin_dose_needed - iob)
-
-            # Usiamo la soglia del paziente (200.0 mg/dL) solo per determinare la SEVERITÀ del messaggio
-            is_critical_hyper = self.patient.is_hyperglycemic(glucose_value)  # True se Glicemia > 200.0
-
+            is_critical_hyper = self.patient.is_hyperglycemic(glucose_value)
             time_since_last_correction = time.time() - self.last_correction_time
 
             print(f"   [DBG] Dose necessaria (senza IOB): {insulin_dose_needed:.2f}U")
             print(f"   [DBG] Insulina Attiva (IOB): {iob:.2f}U")
             print(f"   [DBG] Dose finale da somministrare: {insulin_dose:.2f}U")
 
-            # La condizione di erogazione: Dose > 0 E tempo minimo trascorso
             if insulin_dose > 0 and time_since_last_correction > self.min_time_between_corrections:
 
-                # Applica il limite massimo di bolo
-                insulin_dose = min(insulin_dose, self.max_bolus_dose)
+
+                insulin_dose = min(insulin_dose, self.max_bolus_dose) # Applica il limite massimo di bolo
                 action_needed = True
 
                 # Aggiorna il messaggio in base al livello di severità
@@ -202,7 +174,6 @@ class DataCollectorConsumerSenML:
                     alert_level = "WARNING_HIGH"
                     alert_message = f"⚠️ GLICEMIA ALTA: {glucose_value:.1f} mg/dL - Correzione con {insulin_dose:.2f}U insulina"
                     priority = "high"
-
                 print(f"\n💉 Dose insulina calcolata (netta): {insulin_dose:.2f} unità")
                 print(f"🎯 Target glicemico: {target_glucose:.1f} mg/dL")
                 print(f"⚡ Priorità comando: {priority}")
@@ -217,19 +188,18 @@ class DataCollectorConsumerSenML:
                 self.send_notification("INFO", msg, "low")
 
             elif insulin_dose > 0:
-                # Caso in cui serve insulina ma il tempo minimo tra le correzioni non è trascorso
                 remaining = self.min_time_between_corrections - time_since_last_correction
                 print(f"⏳ Attesa tra correzioni: {remaining:.0f}s rimanenti")
                 if not self.waiting_notification_sent:
                     self.send_notification("INFO", "⏳ Iperglicemia rilevata: in attesa della correzione precedente",
                                            "low")
                     self.waiting_notification_sent = True
+
         # VALORI NORMALI
         else:
             print(
-                f"✅ Glicemia nel range target ({self.patient.target_glucose_min}-{self.patient.target_glucose_max} mg/dL)")
+                f" Glicemia nel range target ({self.patient.target_glucose_min}-{self.patient.target_glucose_max} mg/dL)")
 
-        # ✅ Invia comando alla pompa in SenML se necessario
         if action_needed and insulin_dose > 0:
             reason = f"Glucose level: {glucose_value:.1f} mg/dL (High)"
             self.send_insulin_command_senml(
@@ -246,8 +216,6 @@ class DataCollectorConsumerSenML:
     def process_pump_status(self, data, timestamp):
         """Elabora lo status pompa da messaggio SenML"""
         self.last_pump_status = data
-
-        # Estrai i dati dal messaggio SenML
         pump_status = data.get("status", {}).get("value", "active")
         insulin_level = data.get("reservoir", {}).get("value", 0)
         reservoir_pct = data.get("reservoir_pct", {}).get("value", 0)
@@ -266,7 +234,6 @@ class DataCollectorConsumerSenML:
 
         if last_bolus is not None:
             print(f"   💊 Ultimo bolo: {last_bolus:.1f}U")
-
         if alarms_count > 0:
             print(f"   🚨 Allarmi attivi ({alarms_count}): {alarms_str}")
 
@@ -275,17 +242,14 @@ class DataCollectorConsumerSenML:
             self.send_notification("WARNING",
                                    f"⚠️ Insulina quasi terminata ({insulin_level:.1f}U)",
                                    "high")
-
         if battery_level < 20 and "low_battery" not in alarms_str:
             self.send_notification("WARNING",
                                    f"🔋 Batteria pompa bassa ({battery_level:.0f}%)",
                                    "medium")
-
         if insulin_level <= 0:
             self.send_notification("EMERGENCY",
                                    "🚨 POMPA INSULINA VUOTA - Ricaricare immediatamente!",
                                    "critical")
-
         if "battery_critical" in alarms_str:
             self.send_notification("EMERGENCY",
                                    "🚨 BATTERIA CRITICA - Sostituire immediatamente!",
@@ -355,7 +319,6 @@ class DataCollectorConsumerSenML:
             reason: Motivo del comando
         """
         try:
-            # ✅ Crea comando SenML compatibile con la pompa
             command_senml, command_id = self.create_insulin_command_senml(
                 insulin_amount=insulin_amount,
                 delivery_mode=delivery_mode,
@@ -363,7 +326,6 @@ class DataCollectorConsumerSenML:
                 reason=reason
             )
 
-            # Pubblica il comando
             result = self.client.publish(
                 self.pump_command_topic,
                 command_senml,
@@ -380,13 +342,11 @@ class DataCollectorConsumerSenML:
                 print(f"   📝 Motivo: {reason}")
                 print(f"   📤 Topic: {self.pump_command_topic}")
 
-                # Mostra preview del SenML (primi 100 caratteri)
                 preview = command_senml[:100] + "..." if len(command_senml) > 100 else command_senml
                 print(f"   📋 SenML: {preview}")
             else:
                 print(f"❌ Errore pubblicazione comando (rc: {result.rc})")
 
-            # Salva nel log
             self.insulin_commands_sent.append({
                 'timestamp': time.time(),
                 'command_id': command_id,
@@ -435,7 +395,6 @@ class DataCollectorConsumerSenML:
                 'severity': severity
             })
 
-            # Mantieni solo le ultime 10 notifiche
             if len(self.alert_history) > 10:
                 self.alert_history = self.alert_history[-10:]
 
@@ -473,7 +432,6 @@ class DataCollectorConsumerSenML:
         print("✅ Data Collector disconnesso")
 
     def get_statistics(self):
-        """Restituisce statistiche del Data Collector"""
         total_commands = len(self.insulin_commands_sent)
         total_insulin = sum(cmd['amount'] for cmd in self.insulin_commands_sent)
 
@@ -491,14 +449,9 @@ class DataCollectorConsumerSenML:
         utilizzando il flag retain=True.
         """
         try:
-            # Recupera il topic dalla configurazione
-            # Assicurati che in SystemConfig sia definito come: PATIENT_INFO_TOPIC = "info"
             info_topic = f"{self.base_topic}/{Config.PATIENT_INFO_TOPIC}"
-
-            # Genera il messaggio SenML usando il metodo già presente nel modello PatientDescriptor
             patient_senml = self.patient.to_senml()
 
-            # Pubblica con retain=True come richiesto dalle specifiche
             result = self.client.publish(
                 info_topic,
                 patient_senml,
@@ -514,18 +467,14 @@ class DataCollectorConsumerSenML:
         except Exception as e:
             print(f"❌ Errore durante la pubblicazione delle info paziente: {e}")
 
-# MAIN - Esempio di utilizzo
 if __name__ == "__main__":
-    # Definisce il percorso di default al file JSON nella cartella conf/
     CONFIG_FILE_PATH = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         'conf',
         'patient_config.json'
     )
 
-    # Configurazione paziente
     try:
-        # Carica il descrittore del paziente dal file JSON
         patient = PatientDescriptor.from_json_file(CONFIG_FILE_PATH)
         patient_id = patient.patient_id
 
