@@ -25,12 +25,14 @@ class InsulinPumpCommand:
         self.priority = priority  # "low", "normal", "high", "emergency"
         self.reason = reason  # Motivo del comando
 
-        # Parametri di sicurezza
-        #self.max_delivery_rate = 25.0  # unità/ora massime
-        #self.timeout_minutes = 60  # timeout comando
+    def is_safe_dose(self, max_bolus=None, max_basal=None):
+        """Verifica se la dose è sicura usando i limiti configurati"""
+        # Se non specificati, usa i limiti globali di sicurezza da Config
+        if max_bolus is None:
+            max_bolus = Config.SAFETY_MAX_BOLUS_U
+        if max_basal is None:
+            max_basal = Config.SAFETY_MAX_BASAL_RATE_UH
 
-    def is_safe_dose(self, max_bolus=15.0, max_basal=5.0):
-        """Verifica se la dose è sicura"""
         if self.delivery_mode in ["bolus", "correction"]:
             return self.insulin_amount <= max_bolus
         elif self.delivery_mode == "basal":
@@ -54,7 +56,11 @@ class InsulinPumpCommand:
 class InsulinPumpStatus:
     """Status della pompa insulina"""
 
-    def __init__(self, pump_id, patient_id):
+    def __init__(self, pump_id, patient_id, initial_reservoir=None, initial_battery=None):
+        """
+        Inizializza lo stato della pompa.
+        Accetta valori opzionali per serbatoio e batteria, altrimenti usa i default da Config.
+        """
         # Identificazione
         self.pump_id = pump_id
         self.patient_id = patient_id
@@ -63,10 +69,19 @@ class InsulinPumpStatus:
         self.pump_status = "active"  # "active", "inactive", "error", "maintenance", "low_insulin"
         self.current_basal_rate = 1.0  # unità/ora
 
-        # Livelli
-        self.insulin_reservoir_level = 300.0  # unità rimanenti
-        self.insulin_reservoir_capacity = 300.0  # capacità totale
-        self.battery_level = 100.0  # percentuale
+        # Capacità totale
+        self.insulin_reservoir_capacity = Config.PUMP_DEFAULT_CAPACITY
+
+        # Inizializzazione livelli
+        if initial_reservoir is not None:
+            self.insulin_reservoir_level = initial_reservoir
+        else:
+            self.insulin_reservoir_level = Config.PUMP_DEFAULT_CAPACITY
+
+        if initial_battery is not None:
+            self.battery_level = initial_battery
+        else:
+            self.battery_level = Config.PUMP_DEFAULT_BATTERY
 
         # Ultima erogazione
         self.last_bolus_amount = None
@@ -82,9 +97,11 @@ class InsulinPumpStatus:
 
     def update_status(self):
         """Aggiorna lo status della pompa simulando operazioni reali"""
-        # Simula consumo insulina basale
-        hourly_consumption = self.current_basal_rate / 720.0
-        self.insulin_reservoir_level = max(0.0, self.insulin_reservoir_level - hourly_consumption)
+        # Simula consumo insulina basale calcolo: (Unità/ora) * (ore trascorse in un intervallo)
+        seconds_elapsed = Config.PUMP_STATUS_INTERVAL
+        consumption_per_interval = self.current_basal_rate * (seconds_elapsed / 3600.0)
+
+        self.insulin_reservoir_level = max(0.0, self.insulin_reservoir_level - consumption_per_interval)
 
         # Simula consumo batteria
         battery_drain = Config.SIM_PUMP_BATTERY_DRAIN_PCT
@@ -100,17 +117,17 @@ class InsulinPumpStatus:
         """Controlla e aggiorna gli allarmi"""
         self.active_alarms = []
 
-        if self.insulin_percentage() < 20.0:
+        if self.insulin_percentage() < Config.PUMP_ALARM_LOW_INSULIN_PCT:
             self.active_alarms.append("low_insulin")
 
-        if self.battery_level < 15.0:
+        if self.battery_level < Config.PUMP_ALARM_LOW_BATTERY_PCT:
             self.active_alarms.append("low_battery")
 
         if self.insulin_reservoir_level <= 0:
             self.active_alarms.append("insulin_empty")
             self.pump_status = "inactive"
 
-        if self.battery_level <= 5.0:
+        if self.battery_level <= Config.PUMP_ALARM_CRITICAL_BATTERY_PCT:
             self.active_alarms.append("battery_critical")
 
     def deliver_bolus(self, amount, bolus_type="correction"):
@@ -125,14 +142,20 @@ class InsulinPumpStatus:
 
     def insulin_percentage(self):
         """Percentuale insulina rimanente"""
-        return (self.insulin_reservoir_level / self.insulin_reservoir_capacity) * 100
+        if self.insulin_reservoir_capacity > 0:
+            return (self.insulin_reservoir_level / self.insulin_reservoir_capacity) * 100
+        return 0.0
 
-    def needs_refill(self, threshold=20.0):
+    def needs_refill(self, threshold=None):
         """Verifica se serve ricarica insulina"""
+        if threshold is None:
+            threshold = Config.PUMP_ALARM_LOW_INSULIN_PCT
         return self.insulin_percentage() < threshold
 
-    def battery_low(self, threshold=15.0):
+    def battery_low(self, threshold=None):
         """Verifica se batteria è scarica"""
+        if threshold is None:
+            threshold = Config.PUMP_ALARM_LOW_BATTERY_PCT
         return self.battery_level < threshold
 
     def has_critical_alarms(self):
