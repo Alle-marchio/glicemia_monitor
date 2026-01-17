@@ -51,9 +51,6 @@ class GlucoseSimulationLogic:
             La variazione negativa di glicemia (mg/dL) da applicare.
 
         """
-
-        # Simulazione semplificata:
-        # Tempo di azione dell'insulina rapida (es. 3 ore)
         INSULIN_DURATION = Config.INSULIN_ACTION_DURATION_SECONDS
 
         total_effect = 0.0
