@@ -14,17 +14,17 @@ from utils.senml_helper import SenMLHelper
 
 class GlucoseSensorProducerSenML:
     """
-    Sensore glicemia simulato:
-    - La logica del sensore è nel modello
-    - Qui si decide solo la modalità e la variation da applicare
+    Sensore glicemia simulato
     """
 
-    def __init__(self, sensor_id, patient_id, initial_glucose=120.0, simulation_mode="normal"):
+    def __init__(self, sensor_id, patient_id, initial_glucose=None, simulation_mode="normal"):
         self.sensor_id = sensor_id
         self.patient_id = patient_id
 
-        # Istanza del modello
-        self.sensor = GlucoseSensorData(sensor_id, patient_id, initial_glucose)
+        # Se non specificato, usa il valore di default dalla Config
+        start_val = initial_glucose if initial_glucose is not None else Config.SIM_SENSOR_START_VALUE
+        # Istanza del modello (che internamente gestisce già i default se passassimo None)
+        self.sensor = GlucoseSensorData(sensor_id, patient_id, glucose_value=start_val)
 
         # Configurazione MQTT
         self.broker_address = Config.BROKER_ADDRESS
@@ -35,6 +35,7 @@ class GlucoseSensorProducerSenML:
         self.base_topic = f"/iot/patient/{patient_id}"
         self.publish_topic = f"{self.base_topic}/glucose/sensor/data"
         self.command_topic = f"{self.base_topic}/insulin/pump/command"
+        self.control_topic = f"{self.base_topic}/glucose/sensor/set_mode"
 
         # Letture
         self.reading_interval = Config.GLUCOSE_READING_INTERVAL
@@ -42,32 +43,21 @@ class GlucoseSensorProducerSenML:
         self.reading_count = 0
 
         # Parametri per l'effetto insulina
-        self.active_insulin_doses = []  # Lista di [{'amount': X, 'start_time': Y}]
-        # Usa il fattore di sensibilità dalle configurazioni globali
+        self.active_insulin_doses = []
         self.insulin_sensitivity_factor = Config.INSULIN_CORRECTION_FACTOR
 
         # Callbacks
         self.client.on_connect = self.on_connect
         self.client.on_disconnect = self.on_disconnect
-        self.client.on_message = self.on_message  # Abilitiamo la ricezione di messaggi
+        self.client.on_message = self.on_message
 
-    # ---------------------------------------------------------------------
-    # MQTT CALLBACKS
-    # ---------------------------------------------------------------------
     def on_connect(self, client, userdata, flags, rc):
         if rc == 0:
-            print(f"✅ Sensore glicemia (SenML) connesso al broker MQTT")
-            print(f"📡 Topic pubblicazione: {self.publish_topic}")
-            print(f"📥 Subscribing a: {self.command_topic}")
-            print(f"⏱️ Intervallo letture: {self.reading_interval}s")
-            print(f"🎭 Modalità: {self.simulation_mode}")
-            print("=" * 60)
-
+            print(f"✅ Sensore glicemia connesso")
+            print(f"Topic pubblicazione: {self.publish_topic}")
+            print(f"Modalità: {self.simulation_mode}")
             client.subscribe(self.command_topic, qos=Config.QOS_COMMANDS)
-            self.control_topic = f"{self.base_topic}/glucose/sensor/set_mode"
             client.subscribe(self.control_topic)
-            print(f"📥 Ascolto cambio modalità su: {self.control_topic}")
-
         else:
             print(f"❌ Connessione fallita: rc={rc}")
 
@@ -76,45 +66,34 @@ class GlucoseSensorProducerSenML:
             print(f"⚠️ Disconnessione inattesa (rc={rc})")
 
     def on_message(self, client, userdata, msg):
-        """Callback quando arriva un comando MQTT (gestisce l'insulina erogata)"""
         try:
-            topic = msg.topic
             payload = msg.payload.decode()
 
-            if msg.topic == getattr(self, 'control_topic', ''):
+            if msg.topic == self.control_topic:
                 self.change_simulation_mode(payload)
 
-            if "insulin/pump/command" in topic:
-                # Parse del comando SenML per estrarre la dose
-                parsed_senml = SenMLHelper.parse_senml(payload)
-                data = parsed_senml.get("measurements", {})
-
+            if "insulin/pump/command" in msg.topic:
+                parsed = SenMLHelper.parse_senml(payload)
+                data = parsed.get("measurements", {})
                 dose = data.get("dose", {}).get("value", 0.0)
-                delivery_type = data.get("type", {}).get("value", "bolus")
+                d_type = data.get("type", {}).get("value", "bolus")
 
-                # Registra la dose se è un bolo o una correzione valida
-                if dose > 0 and delivery_type in ["bolus", "correction"]:
-                    self.active_insulin_doses.append({
-                        'amount': dose,
-                        'start_time': time.time()
-                    })
-                    print(f"💉 Sensore: Registrata dose {dose:.2f}U di insulina per simulazione effetto.")
+                if dose > 0 and d_type in ["bolus", "correction"]:
+                    self.active_insulin_doses.append({'amount': dose, 'start_time': time.time()})
+                    print(f"💉 Sensore: Rilevata insulina {dose:.2f}U")
 
         except Exception as e:
-            print(f"❌ Errore nell'elaborazione del comando SenML in Sensore: {e}")
+            print(f"❌ Errore comando sensore: {e}")
 
-    # ---------------------------------------------------------------------
-    # LOGICA SIMULATIVA
-    # ---------------------------------------------------------------------
     def simulate_glucose_reading(self):
-        """Genera una lettura completa, delegando la variazione alla logica di simulazione."""
+        """Genera una lettura completa delegando alla logica centralizzata"""
 
-        # CHIAMA LA LOGICA DI SIMULAZIONE ESTERNA per ottenere la variazione
+        # Variazione naturale (Config-driven)
         natural_variation = GlucoseSimulationLogic.generate_variation(
             current_value=self.sensor.glucose_value,
             simulation_mode=self.simulation_mode
         )
-        # CALCOLA L'EFFETTO DELL'INSULINA ATTIVA
+        # Effetto insulina (Config-driven)
         insulin_effect = GlucoseSimulationLogic.calculate_insulin_effect(
             active_insulin_doses=self.active_insulin_doses,
             isf=self.insulin_sensitivity_factor,
@@ -132,87 +111,33 @@ class GlucoseSensorProducerSenML:
         self.sensor.apply_variation(total_variation, self.reading_interval)
         return self.sensor
 
-    # ---------------------------------------------------------------------
-    # CREAZIONE SENML
-    # ---------------------------------------------------------------------
-    def create_senml_message(self, reading):
-        """Genera il SenML tramite il modello."""
-        return reading.to_senml()
-
-    # ---------------------------------------------------------------------
-    # PUBBLICAZIONE MQTT
-    # ---------------------------------------------------------------------
     def publish_reading(self):
         try:
             self.reading_count += 1
 
             reading = self.simulate_glucose_reading()
-            senml_json = self.create_senml_message(reading)
+            senml_json = reading.to_senml()
 
-            result = self.client.publish(
-                self.publish_topic,
-                senml_json,
-                qos=Config.QOS_SENSOR_DATA,
-                retain=False
-            )
+            self.client.publish(self.publish_topic, senml_json, qos=Config.QOS_SENSOR_DATA)
 
-            # Output leggibile
-            status_emoji = self._get_status_emoji(reading.glucose_status)
-            trend_emoji = self._get_trend_emoji(reading.trend_direction)
-
-            print(f"\n📊 Lettura glicemia #{self.reading_count} (SenML)")
-            print(f"🩸 Glicemia: {reading.glucose_value:.1f} mg/dL {status_emoji}")
-            print(f"📈 Status: {reading.glucose_status}")
-            print(f"{trend_emoji} Trend: {reading.trend_direction} ({reading.trend_rate:.1f} mg/dL/min)")
-            print(f"🔋 Batteria sensore glicemia: {reading.battery_level:.1f}%")
-            print(f"📡 Segnale: {reading.signal_strength} dBm")
-            print("-" * 40)
+            # Log compatto
+            print(f"Lettura #{self.reading_count} | {reading.glucose_value:.1f} mg/dL | {reading.trend_direction}({reading.trend_rate:.1f} mg/dL/min) | {reading.battery_level:.1f}% |📡:{reading.signal_strength} dBm")
             if reading.is_critical():
                 print("🚨 Valore critico!")
 
-            if result.rc != mqtt.MQTT_ERR_SUCCESS:
-                print(f"⚠️ Errore pubblicazione: rc={result.rc}")
-
         except Exception as e:
-            print(f"❌ Errore nella pubblicazione: {e}")
+            print(f"❌ Errore pubblicazione: {e}")
 
-    # ---------------------------------------------------------------------
-    # UTILS
-    # ---------------------------------------------------------------------
-    def _get_status_emoji(self, status):
-        return {
-            "critical_low": "🔴🔻🔻",
-            "low": "🔴🔻",
-            "normal": "🟢",
-            "high": "🔴🔺",
-            "critical_high": "🔴🔺🔺"
-        }.get(status, "⚪")
-
-    def _get_trend_emoji(self, trend):
-        return {
-            "rising": "📈",
-            "falling": "📉",
-            "stable": "➡️"
-        }.get(trend, "❓")
-
-    # ---------------------------------------------------------------------
-    # RUN MODES
-    # ---------------------------------------------------------------------
     def change_simulation_mode(self, new_mode):
         valid = ["normal", "hypoglycemia", "hyperglycemia", "fluctuating"]
         if new_mode in valid:
             self.simulation_mode = new_mode
-            print(f"🎭 Modalità cambiata in: {new_mode}")
-        else:
-            print(f"⚠️ Modalità non valida. Valide: {', '.join(valid)}")
+            print(f"🎭 Modalità: {new_mode}")
 
     def run_continuous(self):
         try:
-            print("\n" + "=" * 60)
-            print("🚀 AVVIO SENSORE GLICEMIA (SenML)")
-            print("=" * 60)
-
-            self.client.connect(self.broker_address, self.broker_port, 60)
+            print("🚀 AVVIO SENSORE GLICEMIA")
+            self.client.connect(self.broker_address, self.broker_port, Config.MQTT_KEEPALIVE_S)
             self.client.loop_start()
 
             while True:
@@ -220,49 +145,25 @@ class GlucoseSensorProducerSenML:
                 time.sleep(self.reading_interval)
 
         except KeyboardInterrupt:
-            print("\n⏹️ Interrotto dall'utente")
             self.stop()
 
     def stop(self):
-        print("\n🛑 Arresto sensore...")
         self.client.loop_stop()
         self.client.disconnect()
-        print("✅ Sensore disconnesso")
 
 
 if __name__ == "__main__":
+    CONFIG_FILE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'conf',
+                                    'patient_config.json')
 
-    # Rimuoviamo l'importazione di argparse
-
-    # Definisce il percorso di default al file JSON nella cartella conf/
-    CONFIG_FILE_PATH = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        'conf',
-        'patient_config.json'
-    )
-
-    # Valori di default interni al main (se non specificati nel JSON)
-    initial_glucose = 120.0
+    # Default value preso dalla Config globale, non più hardcoded
+    initial_glucose = Config.SIM_SENSOR_START_VALUE
     simulation_mode = "normal"
-    sensor_id = "sensor_001"  # ID del sensore non del paziente
+    sensor_id = "sensor_001"
 
-    # Configurazione paziente - ORA CARICATA DA FILE
     try:
         patient = PatientDescriptor.from_json_file(CONFIG_FILE_PATH)
-        patient_id = patient.patient_id
-
-        print(f"✅ Configurazione paziente '{patient.name}' caricata da: {CONFIG_FILE_PATH}")
-
-    except (FileNotFoundError, ValueError) as e:
-        print(f"❌ Errore di caricamento o parsing della configurazione: {e}")
-        sys.exit(1)
-
-    # Crea il sensore
-    sensor = GlucoseSensorProducerSenML(
-        sensor_id=sensor_id,
-        patient_id=patient_id,
-        initial_glucose=initial_glucose,
-        simulation_mode=simulation_mode
-    )
-
-    sensor.run_continuous()
+        sensor = GlucoseSensorProducerSenML(sensor_id, patient.patient_id, initial_glucose, simulation_mode)
+        sensor.run_continuous()
+    except Exception as e:
+        print(f"❌ Errore avvio: {e}")

@@ -7,19 +7,29 @@ from conf.SystemConfiguration import SystemConfig as Config
 class GlucoseSensorData:
     """Modello completo del sensore di glucosio, con tutta la logica interna di aggiornamento."""
 
-    def __init__(self, sensor_id, patient_id, glucose_value=100.0):
+    def __init__(self, sensor_id, patient_id, glucose_value=None, initial_battery=None):
         # Identificazione
         self.sensor_id = sensor_id
         self.patient_id = patient_id
 
-        # Dati glicemici
-        self.glucose_value = glucose_value
-        self.glucose_status = self._determine_glucose_status(glucose_value)
+        # Dati glicemici (default al target se non specificato)
+        if glucose_value is None:
+            self.glucose_value = Config.TARGET_GLUCOSE
+        else:
+            self.glucose_value = glucose_value
+
+        self.glucose_status = self._determine_glucose_status(self.glucose_value)
 
         # Metadati sensore
         self.sensor_status = "active"
-        self.battery_level = 100.0  # %
-        self.signal_strength = -45  # dBm
+        # Livello batteria (default 100% se non specificato)
+        if initial_battery is not None:
+            self.battery_level = initial_battery
+        else:
+            self.battery_level = 100.0
+
+        # Segnale iniziale (valore medio)
+        self.signal_strength = int((Config.SENSOR_SIGNAL_MIN_DBM + Config.SENSOR_SIGNAL_MAX_DBM) / 2)
 
         # Timestamp
         self.timestamp = int(time.time())
@@ -55,32 +65,32 @@ class GlucoseSensorData:
         """
         Applica una variazione di glicemia e aggiorna TUTTI
         i parametri del sensore in modo coerente.
-        Questo elimina duplicazione dal simulatore.
         """
 
         # Aggiorna glicemia entro range realistico
-        new_value = max(40.0, min(400.0, self.glucose_value + variation))
-        self.glucose_value = new_value
+        new_value = self.glucose_value + variation
+        self.glucose_value = max(Config.SENSOR_MIN_VALUE, min(Config.SENSOR_MAX_VALUE, new_value))
 
         # Stato glicemico
-        self.glucose_status = self._determine_glucose_status(new_value)
+        self.glucose_status = self._determine_glucose_status(self.glucose_value)
 
-        # Trend
-        if variation > 3:
+        # Trend (calcolato in base alla soglia configurata)
+        if variation > Config.SENSOR_TREND_THRESHOLD:
             self.trend_direction = "rising"
             self.trend_rate = abs(variation) / (reading_interval / 60.0)
-        elif variation < -3:
+        elif variation < -Config.SENSOR_TREND_THRESHOLD:
             self.trend_direction = "falling"
             self.trend_rate = abs(variation) / (reading_interval / 60.0)
         else:
             self.trend_direction = "stable"
             self.trend_rate = 0.0
 
-        # Batteria (degradazione naturale)
-        self.battery_level = max(0.0, self.battery_level - random.uniform(0.1, 0.2))
+        # Batteria (degradazione naturale configurabile)
+        drain = random.uniform(Config.SENSOR_BATTERY_DRAIN_MIN, Config.SENSOR_BATTERY_DRAIN_MAX)
+        self.battery_level = max(0.0, self.battery_level - drain)
 
-        # Qualità segnale
-        self.signal_strength = random.randint(-60, -40)
+        # Qualità segnale (oscillazione casuale entro range configurato)
+        self.signal_strength = random.randint(Config.SENSOR_SIGNAL_MIN_DBM, Config.SENSOR_SIGNAL_MAX_DBM)
 
         # Timestamp aggiornato
         self.timestamp = int(time.time())
@@ -95,9 +105,9 @@ class GlucoseSensorData:
     def requires_immediate_action(self):
         """Verifica condizioni per intervento immediato."""
         return (
-            self.is_critical()
-            or self.glucose_status in ["low", "high"]
-            or self.sensor_status == "error"
+                self.is_critical()
+                or self.glucose_status in ["low", "high"]
+                or self.sensor_status == "error"
         )
 
     def get_alert_level(self):

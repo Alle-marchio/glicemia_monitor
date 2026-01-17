@@ -6,34 +6,30 @@ class GlucoseSimulationLogic:
     della glicemia in base alla modalità di simulazione.
     """
 
-    #parte assolutamente da cambiare
     @staticmethod
     def generate_variation(current_value: float, simulation_mode: str) -> float:
-        """Genera una variazione in base alla modalità scelta."""
-
         if simulation_mode == "normal":
-            # Simula una lenta deriva casuale (Random Walk) tipica di un diabetico
-            return random.uniform(-3, 3)
+            # Simula una lenta deriva casuale (Random Walk)
+            return random.uniform(Config.SIM_NORMAL_MIN, Config.SIM_NORMAL_MAX)
 
         elif simulation_mode == "hypoglycemia":
-            # Forte tendenza alla discesa, con piccola probabilità di rialzo
-            v = random.uniform(-8, -2)
-            if random.random() < 0.1: # 10% di probabilità di un piccolo rialzo
-                v = random.uniform(2, 8)
+            v = random.uniform(Config.SIM_HYPO_DOWN_MIN, Config.SIM_HYPO_DOWN_MAX)
+            if random.random() < Config.SIM_HYPO_UP_PROBABILITY: # Possibile piccolo rialzo
+                v = random.uniform(Config.SIM_HYPO_UP_MIN, Config.SIM_HYPO_UP_MAX)
             return v
 
         elif simulation_mode == "hyperglycemia":
-            # Forte tendenza alla salita, con piccola probabilità di discesa
-            v = random.uniform(2, 10)
-            if random.random() < 0.1: # 10% di probabilità di un piccolo ribasso
-                v = random.uniform(-8, -2)
+            v = random.uniform(Config.SIM_HYPER_UP_MIN, Config.SIM_HYPER_UP_MAX)
+            if random.random() < Config.SIM_HYPER_DOWN_PROBABILITY: # Possibile piccolo ribasso
+                v = random.uniform(Config.SIM_HYPER_DOWN_MIN, Config.SIM_HYPER_DOWN_MAX)
             return v
 
         elif simulation_mode == "fluctuating":
-            # Variazioni casuali molto ampie
-            return random.uniform(-15, 15)
+            # Variazioni molto ampie
+            return random.uniform(Config.SIM_FLUCTUATING_MIN, Config.SIM_FLUCTUATING_MAX)
 
-        return random.uniform(-7, 7) # Fallback
+        # Fallback generico
+        return random.uniform(Config.SIM_FALLBACK_MIN, Config.SIM_FALLBACK_MAX)
 
     @staticmethod
     def calculate_insulin_effect(active_insulin_doses: list, isf: float, current_time: float,
@@ -49,11 +45,9 @@ class GlucoseSimulationLogic:
 
         Returns:
             La variazione negativa di glicemia (mg/dL) da applicare.
-
         """
 
-        # Simulazione semplificata:
-        # Tempo di azione dell'insulina rapida (es. 3 ore)
+        # Tempo di azione dell'insulina
         INSULIN_DURATION = Config.INSULIN_ACTION_DURATION_SECONDS
 
         total_effect = 0.0
@@ -78,5 +72,5 @@ class GlucoseSimulationLogic:
         # Aggiorna la lista di dosi attive (rimuove le scadute)
         active_insulin_doses[:] = new_active_doses
 
-        # Limita la riduzione per non avere crolli iperbolici in un singolo intervallo
+        # Limita la riduzione per evitare crolli improvvisi (safety guard interna)
         return max(-30.0, total_effect)
