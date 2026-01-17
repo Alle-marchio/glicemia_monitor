@@ -5,24 +5,21 @@ from utils.senml_helper import SenMLHelper
 from conf.SystemConfiguration import SystemConfig as Config
 
 class GlucoseSensorData:
-    """Modello completo del sensore di glucosio, con tutta la logica interna di aggiornamento."""
-
     def __init__(self, sensor_id, patient_id, glucose_value=None, initial_battery=None):
+
         # Identificazione
         self.sensor_id = sensor_id
         self.patient_id = patient_id
 
-        # Dati glicemici (default al target se non specificato)
+        # Dati glicemici
         if glucose_value is None:
             self.glucose_value = Config.TARGET_GLUCOSE
         else:
             self.glucose_value = glucose_value
-
         self.glucose_status = self._determine_glucose_status(self.glucose_value)
 
         # Metadati sensore
         self.sensor_status = "active"
-        # Livello batteria (default 100% se non specificato)
         if initial_battery is not None:
             self.battery_level = initial_battery
         else:
@@ -39,12 +36,9 @@ class GlucoseSensorData:
         self.trend_rate = 0.0  # mg/dL/min
 
         # Qualità del dato
-        self.confidence_level = 1.0  # 0–1
+        self.confidence_level = 1.0
         self.calibration_needed = False
 
-    # -------------------------------------------------------
-    # DETERMINAZIONE DELLO STATO GLICEMICO
-    # -------------------------------------------------------
     def _determine_glucose_status(self, glucose_value):
         """Determina lo stato glicemico rispetto alle soglie del sistema."""
         if glucose_value < Config.GLUCOSE_CRITICAL_LOW:
@@ -58,23 +52,19 @@ class GlucoseSensorData:
         else:
             return "normal"
 
-    # -------------------------------------------------------
-    # METODO CENTRALE: APPLICA UNA VARIAZIONE
-    # -------------------------------------------------------
     def apply_variation(self, variation: float, reading_interval: float):
         """
         Applica una variazione di glicemia e aggiorna TUTTI
         i parametri del sensore in modo coerente.
         """
 
-        # Aggiorna glicemia entro range realistico
         new_value = self.glucose_value + variation
         self.glucose_value = max(Config.SENSOR_MIN_VALUE, min(Config.SENSOR_MAX_VALUE, new_value))
 
         # Stato glicemico
         self.glucose_status = self._determine_glucose_status(self.glucose_value)
 
-        # Trend (calcolato in base alla soglia configurata)
+        # Calcolo del trend
         if variation > Config.SENSOR_TREND_THRESHOLD:
             self.trend_direction = "rising"
             self.trend_rate = abs(variation) / (reading_interval / 60.0)
@@ -85,25 +75,21 @@ class GlucoseSensorData:
             self.trend_direction = "stable"
             self.trend_rate = 0.0
 
-        # Batteria (degradazione naturale configurabile)
+        # Degradazione batteria
         drain = random.uniform(Config.SENSOR_BATTERY_DRAIN_MIN, Config.SENSOR_BATTERY_DRAIN_MAX)
         self.battery_level = max(0.0, self.battery_level - drain)
 
-        # Qualità segnale (oscillazione casuale entro range configurato)
+        # Qualità segnale
         self.signal_strength = random.randint(Config.SENSOR_SIGNAL_MIN_DBM, Config.SENSOR_SIGNAL_MAX_DBM)
 
         # Timestamp aggiornato
         self.timestamp = int(time.time())
 
-    # -------------------------------------------------------
     # METODI DI UTILITÀ
-    # -------------------------------------------------------
     def is_critical(self):
-        """True se glicemia in stato critico."""
         return self.glucose_status in ["critical_low", "critical_high"]
 
     def requires_immediate_action(self):
-        """Verifica condizioni per intervento immediato."""
         return (
                 self.is_critical()
                 or self.glucose_status in ["low", "high"]
@@ -111,7 +97,6 @@ class GlucoseSensorData:
         )
 
     def get_alert_level(self):
-        """Restituisce il livello di allerta"""
         if self.glucose_status == "critical_low":
             return "EMERGENCY_LOW"
         elif self.glucose_status == "critical_high":
@@ -125,14 +110,10 @@ class GlucoseSensorData:
         else:
             return "NORMAL"
 
-    # -------------------------------------------------------
-    # SERIALIZZAZIONE
-    # -------------------------------------------------------
     def to_json(self):
         return json.dumps(self, default=lambda o: o.__dict__)
 
     def to_senml(self):
-        """Genera un SenML completo tramite l'helper."""
         return SenMLHelper.create_glucose_sensor_full_data(
             patient_id=self.patient_id,
             sensor_id=self.sensor_id,
