@@ -1,29 +1,20 @@
 import paho.mqtt.client as mqtt
-import json
 import time
 import sys
 import os
-import random
 import threading
 
-# Import dei modelli
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from model.insulin_pump_data import InsulinPumpCommand, InsulinPumpStatus
+from model.insulin_pump_data import InsulinPumpStatus
 from model.patient_descriptor import PatientDescriptor
 from conf.SystemConfiguration import SystemConfig as Config
 from utils.senml_helper import SenMLHelper
 
-
 class InsulinPumpActuatorSenML:
-    """
-    Pompa insulina simulata con supporto SenML
-    """
-
     def __init__(self, pump_id, patient_id, initial_insulin=None, initial_battery=None):
         self.pump_id = pump_id
         self.patient_id = patient_id
 
-        # Inizializza lo status della pompa (usa i default di Config se None)
         self.status = InsulinPumpStatus(
             pump_id,
             patient_id,
@@ -192,7 +183,6 @@ class InsulinPumpActuatorSenML:
             return False
 
     def create_senml_status(self):
-        # Utilizza il metodo to_senml dello status che è già pulito
         return self.status.to_senml()
 
     def publish_status(self):
@@ -207,7 +197,6 @@ class InsulinPumpActuatorSenML:
                 retain=Config.RETAIN_PUMP_STATUS
             )
 
-            # Gestione allarmi critici
             if self.status.has_critical_alarms():
                 for alarm in self.status.active_alarms:
                     self.send_senml_alert("PUMP_ALARM", f"🚨 ALLARME CRITICO: {alarm}", "critical")
