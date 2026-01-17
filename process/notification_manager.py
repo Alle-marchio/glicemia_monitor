@@ -3,7 +3,6 @@ import sys
 import os
 import time
 
-# Import dei modelli e helper
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from conf.SystemConfiguration import SystemConfig as Config
 from utils.senml_helper import SenMLHelper
@@ -43,8 +42,6 @@ class NotificationManager:
         """Callback quando arriva un alert SenML"""
         try:
             payload = msg.payload.decode()
-
-            # Parse del messaggio SenML
             parsed = SenMLHelper.parse_senml(payload)
             measurements = parsed.get("measurements", {})
 
@@ -52,7 +49,6 @@ class NotificationManager:
             message = measurements.get("message", {}).get("value", "N/A")
             severity = measurements.get("severity", {}).get("value", "medium")
             timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(parsed.get("base_time")))
-
             emoji = self.severity_emoji.get(severity, "📢")
 
             print("\n" + "=" * 50)
@@ -80,7 +76,6 @@ class NotificationManager:
 
 
 if __name__ == "__main__":
-    # Logica di caricamento configurazione paziente (come negli altri processi)
     CONFIG_FILE_PATH = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         'conf',
