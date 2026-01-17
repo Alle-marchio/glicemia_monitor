@@ -5,17 +5,13 @@ import sys
 import os
 import json
 import time
-## se vuoi simulare iperglicemia basta modificare initial_glucose in glucose_sensor_producer.py ##
 
-# Import dei modelli e helper
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from conf.SystemConfiguration import SystemConfig as Config
 from utils.senml_helper import SenMLHelper
 from model.patient_descriptor import PatientDescriptor
 
-# --- VARIABILI GLOBALI DI STATO CONDIVISE ---
 data_lock = threading.Lock()
-# Dati attuali
 current_data = {
     'glucose_value': 'N/A',
     'glucose_status': 'N/A',
@@ -24,18 +20,13 @@ current_data = {
     'battery_level': 'N/A',
     'alarms_count': 0
 }
-# Cronologia glicemia per il grafico (ultime 30 letture)
 glucose_history = []
 alert_log = []
-
-# --- CONFIGURAZIONE E INIZIALIZZAZIONE ---
 app = Flask(__name__)
-PATIENT_ID = "patient_001"  # Sarà caricato dal JSON
+PATIENT_ID = "patient_001"
 PATIENT_NAME = "Paziente"
 
-
 def load_patient_config():
-    """Carica la configurazione del paziente dal file JSON."""
     global PATIENT_ID, PATIENT_NAME
     CONFIG_FILE_PATH = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -44,15 +35,12 @@ def load_patient_config():
     )
     try:
         patient = PatientDescriptor.from_json_file(CONFIG_FILE_PATH)
-        PATIENT_ID = patient.patient_id  #carica l'id del paziente
-        PATIENT_NAME = patient.name  # Carica il nome del paziente
+        PATIENT_ID = patient.patient_id
+        PATIENT_NAME = patient.name
         return patient
     except Exception as e:
         print(f"❌ Errore di caricamento configurazione paziente: {e}")
         return None
-
-
-# --- MQTT CLIENT E LOGICA DI SOTTOSCRIZIONE ---
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
@@ -113,7 +101,6 @@ def on_message(client, userdata, msg):
                     'message': measurements.get("message", {}).get("value"),
                     'severity': measurements.get("severity", {}).get("value")
                 })
-                # Mantieni solo gli ultimi 10 alert
                 if len(alert_log) > Config.DASHBOARD_ALERT_LIMIT:
                     alert_log.pop(0)
 
@@ -122,7 +109,6 @@ def on_message(client, userdata, msg):
 
 
 def mqtt_client_loop():
-    """Funzione di loop MQTT da eseguire in un thread separato."""
     client = mqtt.Client(f"web_dashboard_client_{PATIENT_ID}")
     client.on_connect = on_connect
     client.on_message = on_message
@@ -133,14 +119,10 @@ def mqtt_client_loop():
     except Exception as e:
         print(f"❌ Connessione MQTT fallita: {e}")
 
-
 # --- FLASK ROUTES ---
-
 @app.route('/')
 def index():
-    """Punto di ingresso della dashboard, mostra il template HTML."""
     return render_template('dashboard.html', patient_name=PATIENT_NAME)
-
 
 @app.route('/data')
 def get_data():
@@ -149,7 +131,7 @@ def get_data():
         response_data = {
             'current': current_data.copy(),
             'history': glucose_history.copy(),
-            'alerts': list(reversed(alert_log)).copy()  # Inverti per mostrare i più recenti in cima
+            'alerts': list(reversed(alert_log)).copy()
         }
     return jsonify(response_data)
 
@@ -168,7 +150,6 @@ def get_patient_config():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
 @app.route('/simulate/<mode>')
 def simulate_condition(mode):
     """Invia un comando MQTT al sensore per cambiare modalità di simulazione."""
@@ -176,7 +157,6 @@ def simulate_condition(mode):
     if mode in valid_modes:
         command_topic = f"/iot/patient/{PATIENT_ID}/glucose/sensor/set_mode"
 
-        # Usiamo il client MQTT globale o ne creiamo uno temporaneo per l'invio
         temp_client = mqtt.Client(f"web_cmd_{PATIENT_ID}")
         temp_client.connect(Config.BROKER_ADDRESS, Config.BROKER_PORT)
         temp_client.publish(command_topic, mode)
@@ -185,21 +165,15 @@ def simulate_condition(mode):
         return jsonify({"status": "success", "mode": mode})
     return jsonify({"status": "error", "message": "Invalid mode"}), 400
 
-# --- AVVIO ---
-
 if __name__ == '__main__':
-    # 1. Carica configurazione
     patient_config = load_patient_config()
     if patient_config is None:
         sys.exit(1)
 
     print(f"🌐 Avvio Dashboard Web per Paziente: {PATIENT_NAME} (ID: {PATIENT_ID})")
 
-    # 2. Avvia il thread MQTT
     mqtt_thread = threading.Thread(target=mqtt_client_loop)
-    mqtt_thread.daemon = True  # Il thread si chiude quando si chiude il processo principale
+    mqtt_thread.daemon = True
     mqtt_thread.start()
 
-    # 3. Avvia l'applicazione Flask (sulla porta 5000 di default)
-    # Usa host='0.0.0.0' per rendere accessibile la dashboard
     app.run(debug=False, host='0.0.0.0', port=5000)

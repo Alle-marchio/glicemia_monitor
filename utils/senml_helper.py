@@ -1,7 +1,6 @@
 import json
 import time
-from typing import List, Dict, Any, Union
-
+from typing import Dict, Any
 
 class SenMLHelper:
     """
@@ -13,13 +12,12 @@ class SenMLHelper:
                                         glucose_value: float, glucose_status: str,
                                         trend_direction: str, trend_rate: float,
                                         battery_level: float, signal_strength: int,
-                                        sensor_status: str = "active",  # NUOVO
-                                        confidence_level: float = 1.0,  # NUOVO
-                                        calibration_needed: bool = False,  # NUOVO
+                                        sensor_status: str = "active",
+                                        confidence_level: float = 1.0,
+                                        calibration_needed: bool = False,
                                         timestamp: float = None) -> str:
         """
         Crea un messaggio SenML completo con tutti i dati del sensore glicemia
-
         Args:
             patient_id: ID del paziente
             sensor_id: ID del sensore
@@ -32,7 +30,6 @@ class SenMLHelper:
             sensor_status: Stato del sensore ("active", "inactive", "error")
             confidence_level: Livello di confidenza del dato (0-1)
             timestamp: Timestamp UNIX (se None, usa tempo corrente)
-
         Returns:
             Stringa JSON in formato SenML con tutti i dati del sensore
         """
@@ -43,12 +40,11 @@ class SenMLHelper:
 
         senml_record = [
             {
-                "bn": base_name,  # Base Name
-                "bt": timestamp,  # Base Time
-                #"bu": "mg/dL"     # Base Unit per glicemia
+                "bn": base_name,
+                "bt": timestamp,
             },
             {
-                "n": "level",     # Livello glicemia
+                "n": "level",    # Valore glicemia
                 "v": glucose_value,
                 "t": 0
             },
@@ -86,12 +82,12 @@ class SenMLHelper:
             {
                 "n": "confidence", # Livello di confidenza
                 "v": confidence_level,
-                "u": "ratio",  # Valore 0-1
+                "u": "ratio",
                 "t": 0
             },
             {
                 "n": "calibration_needed", # Necessità di calibrazione
-                "vb": calibration_needed,  # Valore booleano
+                "vb": calibration_needed,
             }
         ]
 
@@ -121,7 +117,7 @@ class SenMLHelper:
             {
                 "bn": base_name,
                 "bt": timestamp,
-                "bu": "U"  # Units (unità di insulina)
+                "bu": "U"  # unità di insulina
             },
             {
                 "n": "dose",
@@ -166,7 +162,7 @@ class SenMLHelper:
             {
                 "n": "reservoir",
                 "v": reservoir_level,
-                "u": "U",  # Units
+                "u": "U",  # Unità di insulina
                 "t": 0
             },
             {

@@ -2,9 +2,7 @@ import paho.mqtt.client as mqtt
 import time
 import sys
 import os
-import json
 
-# Import dei modelli
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from model.glucose_sensor_data import GlucoseSensorData
 from model.glucose_simulation_logic import GlucoseSimulationLogic
@@ -13,17 +11,10 @@ from conf.SystemConfiguration import SystemConfig as Config
 from utils.senml_helper import SenMLHelper
 
 class GlucoseSensorProducerSenML:
-    """
-    Sensore glicemia simulato
-    """
-
     def __init__(self, sensor_id, patient_id, initial_glucose=None, simulation_mode="normal"):
         self.sensor_id = sensor_id
         self.patient_id = patient_id
-
-        # Se non specificato, usa il valore di default dalla Config
         start_val = initial_glucose if initial_glucose is not None else Config.SIM_SENSOR_START_VALUE
-        # Istanza del modello (che internamente gestisce già i default se passassimo None)
         self.sensor = GlucoseSensorData(sensor_id, patient_id, glucose_value=start_val)
 
         # Configurazione MQTT
@@ -86,38 +77,29 @@ class GlucoseSensorProducerSenML:
             print(f"❌ Errore comando sensore: {e}")
 
     def simulate_glucose_reading(self):
-        """Genera una lettura completa delegando alla logica centralizzata"""
-
-        # Variazione naturale (Config-driven)
+        # Variazione naturale
         natural_variation = GlucoseSimulationLogic.generate_variation(
             current_value=self.sensor.glucose_value,
             simulation_mode=self.simulation_mode
         )
-        # Effetto insulina (Config-driven)
+        # Effetto insulina
         insulin_effect = GlucoseSimulationLogic.calculate_insulin_effect(
             active_insulin_doses=self.active_insulin_doses,
             isf=self.insulin_sensitivity_factor,
             current_time=time.time(),
             reading_interval=self.reading_interval
         )
-
         total_variation = natural_variation + insulin_effect
-
-        # Log per debug (opzionale, ma utile per l'esame)
-        if insulin_effect < -0.1:
+        if insulin_effect < -0.1: # Log per debug
             print(f"   [DBG] Var. Naturale: {natural_variation:.1f}, Effetto Insulina: {insulin_effect:.1f}")
-
-        # APPLICA LA VARIAZIONE al modello
         self.sensor.apply_variation(total_variation, self.reading_interval)
         return self.sensor
 
     def publish_reading(self):
         try:
             self.reading_count += 1
-
             reading = self.simulate_glucose_reading()
             senml_json = reading.to_senml()
-
             self.client.publish(self.publish_topic, senml_json, qos=Config.QOS_SENSOR_DATA)
 
             # Log compatto
@@ -156,7 +138,6 @@ if __name__ == "__main__":
     CONFIG_FILE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'conf',
                                     'patient_config.json')
 
-    # Default value preso dalla Config globale, non più hardcoded
     initial_glucose = Config.SIM_SENSOR_START_VALUE
     simulation_mode = "normal"
     sensor_id = "sensor_001"
