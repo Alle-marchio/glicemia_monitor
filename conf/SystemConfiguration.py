@@ -1,11 +1,8 @@
 class SystemConfig(object):
-    """
-    Classe per la configurazione dei parametri MQTT del sistema di monitoraggio glicemia
-    """
     # ---------------------------------------------------------------------
     # Configurazione Broker MQTT
     # ---------------------------------------------------------------------
-    BROKER_ADDRESS = "localhost"  # Cambia con il tuo broker MQTT
+    BROKER_ADDRESS = "localhost"
     BROKER_PORT = 1883
     MQTT_USERNAME = "glicemia_user"  # Il tuo username
     MQTT_PASSWORD = "glicemia_pass"  # La tua password
@@ -35,7 +32,7 @@ class SystemConfig(object):
 
     # Retained Messages
     RETAIN_PATIENT_INFO = True
-    RETAIN_PUMP_STATUS = True
+    RETAIN_PUMP_STATUS = False
 
     # ---------------------------------------------------------------------
     # Intervalli di Tempo (secondi)
@@ -53,23 +50,23 @@ class SystemConfig(object):
     GLUCOSE_CRITICAL_HIGH = 250  # Iperglicemia severa
     TARGET_GLUCOSE = 100  # Target glicemico
 
-    INSULIN_CORRECTION_FACTOR = 50  # 1 unità riduce glicemia di 50 mg/dL, alzato solo per test
+    INSULIN_CORRECTION_FACTOR = 50  # 1 unità riduce glicemia di 50 mg/dL
 
     # ---------------------------------------------------------------------
     # Parametri di Sicurezza
     # ---------------------------------------------------------------------
-    SAFETY_MAX_BOLUS_U = 15.0  # Unità massime per singolo bolo (da insulin_pump_actuator.py)
-    SAFETY_MAX_BASAL_RATE_UH = 5.0  # Unità/ora massime per basale (da insulin_pump_actuator.py)
+    SAFETY_MAX_BOLUS_U = 15.0  # Unità massime per singolo bolo
+    SAFETY_MAX_BASAL_RATE_UH = 5.0  # Unità/ora massime per basale
 
-    # Limite temporale tra correzioni (da data_collector_consumer.py)
-    SAFETY_MIN_CORRECTION_INTERVAL_S = 180  # 3 minuti in secondi
+    # Limite temporale tra correzioni
+    SAFETY_MIN_CORRECTION_INTERVAL_S = 180  # 3 minuti
 
     # ---------------------------------------------------------------------
     # Parametri di Simulazione
     # ---------------------------------------------------------------------
-    # Parametri di simulazione (da insulin_pump_data.py)
+    # Parametri di simulazione
     SIM_PUMP_BATTERY_DRAIN_PCT = 0.1  # Scarico batteria per ciclo
 
-    # Configurazioni Dashboard (da web_dashboard.py)
+    # Configurazioni Dashboard
     DASHBOARD_HISTORY_LIMIT = 30  # Numero massimo di letture da mostrare nel grafico
     DASHBOARD_ALERT_LIMIT = 10  # Numero massimo di alert da mostrare nel log

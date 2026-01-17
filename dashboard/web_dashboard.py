@@ -14,7 +14,6 @@ from utils.senml_helper import SenMLHelper
 from model.patient_descriptor import PatientDescriptor
 
 # --- VARIABILI GLOBALI DI STATO CONDIVISE ---
-# Useremo un lock per proteggere l'accesso ai dati tra thread MQTT e Flask
 data_lock = threading.Lock()
 # Dati attuali
 current_data = {
@@ -27,7 +26,7 @@ current_data = {
 }
 # Cronologia glicemia per il grafico (ultime 30 letture)
 glucose_history = []
-alert_log = []  # Cronologia degli alert
+alert_log = []
 
 # --- CONFIGURAZIONE E INIZIALIZZAZIONE ---
 app = Flask(__name__)
@@ -45,7 +44,7 @@ def load_patient_config():
     )
     try:
         patient = PatientDescriptor.from_json_file(CONFIG_FILE_PATH)
-        PATIENT_ID = patient.patient_id
+        PATIENT_ID = patient.patient_id  #carica l'id del paziente
         PATIENT_NAME = patient.name  # Carica il nome del paziente
         return patient
     except Exception as e:

@@ -44,6 +44,10 @@
                     <span class="info-label">Peso</span>
                     <span class="info-value" id="patient-weight">N/A</span>
                 </div>
+                <div class="info-row">
+                    <span class="info-label">Contatto emergenza</span>
+                    <span class="info-value" id="patient-emergency-contact">N/A</span>
+                </div>
 
                 <div style="margin-top: 25px; padding-top: 20px; border-top: 2px solid #d9e9e6;">
                     <h3 style="font-size: 0.95em; color: #007AA5; margin-bottom: 15px; font-weight: 600;">Range Glicemico Target</h3>
@@ -330,6 +334,7 @@
                 $('#patient-id').text(config.patient_id || 'N/A');
                 $('#patient-age').text((config.age || 'N/A') + ' anni');
                 $('#patient-weight').text((config.weight || 'N/A') + ' kg');
+                $('#patient-emergency-contact').text(config.emergency_contact || 'N/A');
                 $('#target-range').text(`${config.target_glucose_min} - ${config.target_glucose_max} mg/dL`);
                 $('#hypo-threshold').text(`< ${config.hypoglycemia_threshold} mg/dL`);
                 $('#hyper-threshold').text(`> ${config.hyperglycemia_threshold} mg/dL`);
