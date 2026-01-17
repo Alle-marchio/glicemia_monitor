@@ -11,6 +11,7 @@ class GlucoseSensorData:
         # Identificazione
         self.sensor_id = sensor_id
         self.patient_id = patient_id
+
         # Dati glicemici
         self.glucose_value = glucose_value
         self.glucose_status = self._determine_glucose_status(glucose_value)
