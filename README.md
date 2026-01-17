@@ -5,7 +5,13 @@
 [![Flask](https://img.shields.io/badge/Flask-2.3.3-black.svg)](https://flask.palletsprojects.com/)
 
 ---
-
+# Autore
+**Alessandro Marchiò**
+- Matricola: 178642
+- Email: 322883@studenti.unimore.it
+- Università: Università di Modena e Reggio Emilia
+- Corso: Intelligent Internet of Things
+---
 Questo progetto implementa un ecosistema IoT avanzato per il **monitoraggio continuo della glicemia (CGM)** e la **somministrazione automatizzata di insulina** (Closed-Loop System simulato). Il sistema sfrutta il protocollo **MQTT** per la comunicazione tra dispositivi e il formato **SenML** (RFC 8428) per garantire l'interoperabilità e la leggerezza dei dati trasmessi.
 ## Funzionalità principali
 
@@ -43,6 +49,7 @@ glicemia_monitor/
 ```
 ---
 
+---
 ## MQTT Topic Structure
 
 | Topic                                                       | Descrizione                        |
@@ -54,11 +61,18 @@ glicemia_monitor/
 | `/iot/patient/<patient_id>/info`                           | Info generali sul paziente(retained)|
 
 ---
-
 ## Requisiti
 
 Installa le dipendenze con:
 
 ```bash
 pip install -r requirements.txt
+```
+---
+## disclaimer
+
+Questo è un progetto accademico/dimostrativo. NON utilizzare in ambiente clinico reale.
+
+---
+
 
