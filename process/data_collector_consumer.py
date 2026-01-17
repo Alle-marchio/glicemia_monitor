@@ -451,12 +451,12 @@ class DataCollectorConsumerSenML:
             print(f"👤 Paziente: {self.patient.name} (ID: {self.patient_id})")
             print(f"🎯 Range target: {self.patient.target_glucose_min}-{self.patient.target_glucose_max} mg/dL")
             print(f"💉 Fattore sensibilità: {self.patient.insulin_sensitivity_factor} mg/dL per unità")
-            print(f"⏱️  Min tempo tra correzioni: {self.min_time_between_corrections}s")
+            print(f"⏱️ Min tempo tra correzioni: {self.min_time_between_corrections}s")
             print(f"📡 Broker: {self.broker_address}:{self.broker_port}")
             print(f"📋 Formato: SenML (RFC 8428)")
             print("=" * 60 + "\n")
 
-            self.client.connect(self.broker_address, self.broker_port, 60)
+            self.client.connect(self.broker_address, self.broker_port, Config.MQTT_KEEPALIVE_S)
             self.client.loop_forever()
 
         except KeyboardInterrupt:
