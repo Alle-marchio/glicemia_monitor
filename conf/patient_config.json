@@ -18,5 +18,5 @@
 
     "sensor_reading_interval": 5,
     "alert_enabled": true,
-    "emergency_contact": "+39 123 456 7890"
+    "emergency_contact": "123 456 7890"
 }
