@@ -40,21 +40,21 @@ class GlucoseSimulationLogic:
         Returns:
             La variazione negativa di glicemia (mg/dL) da applicare.
         """
-        INSULIN_DURATION = Config.INSULIN_ACTION_DURATION_SECONDS
+        insulin_duration = Config.INSULIN_ACTION_DURATION_SECONDS
         total_effect = 0.0
         new_active_doses = []
 
         for dose in active_insulin_doses:
             elapsed = current_time - dose['start_time']
 
-            if elapsed < INSULIN_DURATION:
+            if elapsed < insulin_duration:
                 # Calcoliamo la riduzione potenziale in mg/dL per l'intero bolo
                 total_glucose_reduction = dose['amount'] * isf
-                reduction_per_interval = total_glucose_reduction * (reading_interval / INSULIN_DURATION)
+                reduction_per_interval = total_glucose_reduction * (reading_interval / insulin_duration)
 
                 total_effect -= reduction_per_interval
                 new_active_doses.append(dose)
-            # Se elapsed >= INSULIN_DURATION, la dose viene "dimenticata"
+            # Se elapsed >= insulin_duration, la dose viene "dimenticata"
 
         active_insulin_doses[:] = new_active_doses
 
