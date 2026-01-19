@@ -26,7 +26,7 @@ class SystemConfig(object):
     PATIENT_INFO_TOPIC = "info"
 
     # QoS Levels
-    QOS_SENSOR_DATA = 1  # At least once per dati critici
+    QOS_SENSOR_DATA = 1  # At least once per dati
     QOS_COMMANDS = 2  # Exactly once per comandi
     QOS_NOTIFICATIONS = 1  # At least once per notifiche
 
