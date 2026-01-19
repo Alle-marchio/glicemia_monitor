@@ -28,13 +28,13 @@ PATIENT_NAME = "Paziente"
 
 def load_patient_config():
     global PATIENT_ID, PATIENT_NAME
-    CONFIG_FILE_PATH = os.path.join(
+    config_file_path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         'conf',
         'patient_config.json'
     )
     try:
-        patient = PatientDescriptor.from_json_file(CONFIG_FILE_PATH)
+        patient = PatientDescriptor.from_json_file(config_file_path)
         PATIENT_ID = patient.patient_id
         PATIENT_NAME = patient.name
         return patient
@@ -139,12 +139,12 @@ def get_data():
 def get_patient_config():
     """Endpoint per fornire la configurazione del paziente."""
     try:
-        CONFIG_FILE_PATH = os.path.join(
+        config_file_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
             'conf',
             'patient_config.json'
         )
-        with open(CONFIG_FILE_PATH, 'r') as f:
+        with open(config_file_path, 'r') as f:
             config = json.load(f)
         return jsonify(config)
     except Exception as e:
