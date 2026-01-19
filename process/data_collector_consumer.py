@@ -209,7 +209,7 @@ class DataCollectorConsumerSenML:
                 reason=reason
             )
             self.last_correction_time = time.time()
-            self.waiting_notification_sent = False;
+            self.waiting_notification_sent = False
 
         print("=" * 60 + "\n")
 
