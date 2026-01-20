@@ -246,8 +246,7 @@ class InsulinPumpActuatorSenML:
 
 
 if __name__ == "__main__":
-    CONFIG_FILE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'conf',
-                                    'patient_config.json')
+    CONFIG_FILE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'conf','patient_config.json')
 
     pump_id = 'pump_001'
     initial_insulin = Config.PUMP_DEFAULT_CAPACITY

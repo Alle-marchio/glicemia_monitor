@@ -76,11 +76,7 @@ class NotificationManager:
 
 
 if __name__ == "__main__":
-    CONFIG_FILE_PATH = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        'conf',
-        'patient_config.json'
-    )
+    CONFIG_FILE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),'conf','patient_config.json')
 
     try:
         patient = PatientDescriptor.from_json_file(CONFIG_FILE_PATH)
