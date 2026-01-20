@@ -161,7 +161,6 @@ class DataCollectorConsumerSenML:
 
             if insulin_dose > 0 and time_since_last_correction > self.min_time_between_corrections:
 
-
                 insulin_dose = min(insulin_dose, self.max_bolus_dose) # Applica il limite massimo di bolo
                 action_needed = True
 
@@ -257,8 +256,6 @@ class DataCollectorConsumerSenML:
 
     def create_insulin_command_senml(self, insulin_amount, delivery_mode, priority, reason):
         """
-        Crea un comando insulina in formato SenML compatibile con InsulinPumpActuatorSenML
-
         Formato generato:
         [
             {"bn": "urn:patient:patient_001:insulin:command:", "bt": 1234567890.0},
@@ -341,9 +338,6 @@ class DataCollectorConsumerSenML:
                 print(f"   ⚡ Priorità: {priority}")
                 print(f"   📝 Motivo: {reason}")
                 print(f"   📤 Topic: {self.pump_command_topic}")
-
-                preview = command_senml[:100] + "..." if len(command_senml) > 100 else command_senml
-                print(f"   📋 SenML: {preview}")
             else:
                 print(f"❌ Errore pubblicazione comando (rc: {result.rc})")
 
@@ -446,7 +440,6 @@ class DataCollectorConsumerSenML:
     def publish_patient_info(self):
         """
         Pubblica le informazioni statiche del paziente sul topic /info
-        utilizzando il flag retain=True.
         """
         try:
             info_topic = f"{self.base_topic}/{Config.PATIENT_INFO_TOPIC}"
@@ -468,11 +461,7 @@ class DataCollectorConsumerSenML:
             print(f"❌ Errore durante la pubblicazione delle info paziente: {e}")
 
 if __name__ == "__main__":
-    CONFIG_FILE_PATH = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        'conf',
-        'patient_config.json'
-    )
+    CONFIG_FILE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),'conf','patient_config.json')
 
     try:
         patient = PatientDescriptor.from_json_file(CONFIG_FILE_PATH)
