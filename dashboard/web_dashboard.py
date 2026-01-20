@@ -28,11 +28,7 @@ PATIENT_NAME = "Paziente"
 
 def load_patient_config():
     global PATIENT_ID, PATIENT_NAME
-    config_file_path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        'conf',
-        'patient_config.json'
-    )
+    config_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),'conf','patient_config.json')
     try:
         patient = PatientDescriptor.from_json_file(config_file_path)
         PATIENT_ID = patient.patient_id
@@ -170,7 +166,7 @@ if __name__ == '__main__':
     if patient_config is None:
         sys.exit(1)
 
-    print(f"🌐 Avvio Dashboard Web per Paziente: {PATIENT_NAME} (ID: {PATIENT_ID})")
+    print(f"Avvio Dashboard Web per Paziente: {PATIENT_NAME} (ID: {PATIENT_ID})")
 
     mqtt_thread = threading.Thread(target=mqtt_client_loop)
     mqtt_thread.daemon = True
