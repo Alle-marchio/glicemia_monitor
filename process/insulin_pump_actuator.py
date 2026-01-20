@@ -95,7 +95,7 @@ class InsulinPumpActuatorSenML:
 
     def process_senml_command(self, senml_payload):
         print("\n" + "=" * 60)
-        print("📬 NUOVO COMANDO SENML RICEVUTO")
+        print("** NUOVO COMANDO SENML RICEVUTO **")
         print("=" * 60)
 
         try:

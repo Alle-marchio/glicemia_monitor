@@ -135,8 +135,7 @@ class GlucoseSensorProducerSenML:
 
 
 if __name__ == "__main__":
-    CONFIG_FILE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'conf',
-                                    'patient_config.json')
+    CONFIG_FILE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'conf','patient_config.json')
 
     initial_glucose = Config.SIM_SENSOR_START_VALUE
     simulation_mode = "normal"
