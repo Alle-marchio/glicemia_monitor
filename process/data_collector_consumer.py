@@ -57,7 +57,7 @@ class DataCollectorConsumerSenML:
             print(f"✅ Data Collector (SenML) connesso al broker MQTT")
             print(f"📡 Subscribing a topic glicemia: {self.glucose_data_topic}")
             print(f"📡 Subscribing a topic status pompa: {self.pump_status_topic}")
-            print(f"📋 Formato: SenML (RFC 8428)")
+            print(f"Formato: SenML (RFC 8428)")
             print("=" * 60)
 
             client.subscribe(self.glucose_data_topic, qos=Config.QOS_SENSOR_DATA)
@@ -65,7 +65,7 @@ class DataCollectorConsumerSenML:
 
             self.publish_patient_info()
 
-            print("🎯 Data Collector pronto per ricevere dati SenML...")
+            print("Data Collector pronto per ricevere dati SenML...")
         else:
             print(f"❌ Connessione fallita con codice: {rc}")
 
